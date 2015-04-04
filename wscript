@@ -40,7 +40,7 @@ def configure(conf):
         os.environ['PKG_CONFIG_PATH'] = ':'.join([
             '/usr/local/lib/pkgconfig',
             '/opt/local/lib/pkgconfig'])
-    conf.check_cfg(package='libndn-cxx', args=['--cflags', '--libs'],
+    conf.check_cfg(package='libndn-cxx', args=['--cflags'],
                    uselib_store='NDN_CXX', mandatory=True)
 
     try:
