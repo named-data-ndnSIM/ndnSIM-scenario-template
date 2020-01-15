@@ -45,6 +45,16 @@ NS_LOG_COMPONENT_DEFINE("ndn.WifiExample");
 //   return face;
 // }
 
+static void 
+CourseChange (std::string foo, Ptr<const MobilityModel> mobility)
+{
+  Vector pos = mobility->GetPosition ();
+  Vector vel = mobility->GetVelocity ();
+  std::cout << Simulator::Now () << ", model=" << mobility << ", POS: x=" << pos.x << ", y=" << pos.y
+            << ", z=" << pos.z << "; VEL:" << vel.x << ", y=" << vel.y
+            << ", z=" << vel.z << std::endl;
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -53,6 +63,10 @@ main(int argc, char* argv[])
   Config::SetDefault("ns3::WifiRemoteStationManager::RtsCtsThreshold", StringValue("2200"));
   Config::SetDefault("ns3::WifiRemoteStationManager::NonUnicastMode",
                      StringValue("OfdmRate24Mbps"));
+  Config::SetDefault ("ns3::RandomWalk2dMobilityModel::Mode", StringValue ("Time"));
+  Config::SetDefault ("ns3::RandomWalk2dMobilityModel::Time", StringValue ("2s"));
+  Config::SetDefault ("ns3::RandomWalk2dMobilityModel::Speed", StringValue ("ns3::ConstantRandomVariable[Constant=1.0]"));
+  Config::SetDefault ("ns3::RandomWalk2dMobilityModel::Bounds", StringValue ("0|200|0|200"));
 
   CommandLine cmd;
   cmd.Parse(argc, argv);
@@ -87,11 +101,13 @@ main(int argc, char* argv[])
   MobilityHelper mobility;
   mobility.SetPositionAllocator("ns3::RandomBoxPositionAllocator", "X", PointerValue(randomizer),
                                 "Y", PointerValue(randomizer), "Z", PointerValue(randomizer));
-
-  mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-
+  mobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel",
+                             "Mode", StringValue ("Time"),
+                             "Time", StringValue ("2s"),
+                             "Speed", StringValue ("ns3::ConstantRandomVariable[Constant=1.0]"),
+                             "Bounds", StringValue ("0|200|0|200"));
   NodeContainer nodes;
-  nodes.Create(2);
+  nodes.Create(10);
 
   ////////////////
   // 1. Install Wifi
@@ -117,7 +133,7 @@ main(int argc, char* argv[])
 
   ndn::AppHelper consumerHelper("ns3::ndn::ConsumerCbr");
   consumerHelper.SetPrefix("/test/prefix");
-  consumerHelper.SetAttribute("Frequency", DoubleValue(10.0));
+  consumerHelper.SetAttribute("Frequency", DoubleValue(1.0));
   consumerHelper.Install(nodes.Get(0));
 
   ndn::AppHelper producerHelper("ns3::ndn::Producer");
