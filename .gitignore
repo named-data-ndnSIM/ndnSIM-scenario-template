@@ -6,3 +6,4 @@
 .lock*
 build/
 *.pyc
+.vscode*
