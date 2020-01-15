@@ -1,7 +1,7 @@
 Prerequisites
 =============
 
-Custom version of NS-3 and specified version of ndnSIM needs to be installed.
+Custom version of NS-3 and specified version of ndnSIM needs to be installed (see instructions below).
 
 - NS-3-dev commit hash: cc8cccf59ddd47d047ea6c4500590b1c8e2b1fb1
 - NDNSim commit hash: 387843039ad34f2350d00ba63aa1c061502a6913
