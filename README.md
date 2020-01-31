@@ -16,6 +16,7 @@ The visualiser is extremely unstable. Here are some issues I faced:
 Follow the steps detailed [here](https://ndnsim.net/current/getting-started.html) to get set up correctly
 
 All steps detailed below are for setup with macOS
+```
     brew install boost pkg-config openssl libxml2
     export PKG_CONFIG_PATH="/usr/local/opt/libxml2/lib/pkgconfig"   # put this line in ~/.bashrc or manually type before ./waf configure
 
@@ -49,6 +50,7 @@ All steps detailed below are for setup with macOS
 
     ./waf configure
     ./waf --run <scenario-to-be-configured>
+```
 
 For more information how to install NS-3 and ndnSIM, please refer to http://ndnsim.net website.
 
