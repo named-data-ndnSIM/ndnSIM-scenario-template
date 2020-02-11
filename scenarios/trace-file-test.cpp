@@ -10,16 +10,18 @@
 #include "ns3/network-module.h"
 #include "ns3/wifi-helper.h"
 
+// 802.11p specific packages
 #include "ns3/ocb-wifi-mac.h"
 #include "ns3/wifi-80211p-helper.h"
 #include "ns3/wave-mac-helper.h"
 
+// NDN packages
 #include "ns3/ndnSIM-module.h"
 
 using namespace std;
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE("GlossaIntersection");
+NS_LOG_COMPONENT_DEFINE ("GlossaIntersection");
 
 void ReceivePacket (Ptr<Socket> socket)
 {
@@ -32,10 +34,13 @@ void ReceivePacket (Ptr<Socket> socket)
 int main (int argc, char *argv[])
 {
   std::string phyMode ("OfdmRate6MbpsBW10MHz");
+  uint32_t packetSize = 1000; //bytes -> Need to configure for MAPEM and SPATEM packets being transmitted
   std::string traceFile;
   std::string logFile;
-  int    nodeNum;
+  int nodeNum;
   double duration;
+  double interval = 1; //seconds between broadcasts
+  bool verbose = false;
 
   // Enable logging from the ns2 helper
   LogComponentEnable ("Ns2MobilityHelper",LOG_LEVEL_DEBUG);
@@ -46,6 +51,7 @@ int main (int argc, char *argv[])
   cmd.AddValue ("nodeNum", "Number of nodes", nodeNum);
   cmd.AddValue ("duration", "Duration of Simulation", duration);
   cmd.AddValue ("logFile", "Log file", logFile);
+  cmd.AddValue ("verbose", "turn on all WifiNetDevice log components", verbose);
   cmd.Parse (argc,argv);
 
   // Check command line arguments
@@ -59,64 +65,50 @@ int main (int argc, char *argv[])
   std::ofstream os;
   os.open (logFile.c_str ());
 
-  Config::SetDefault("ns3::WifiRemoteStationManager::FragmentationThreshold", StringValue("2200"));
-  Config::SetDefault("ns3::WifiRemoteStationManager::RtsCtsThreshold", StringValue("2200"));
-  Config::SetDefault("ns3::WifiRemoteStationManager::NonUnicastMode",
-                     StringValue("OfdmRate24Mbps"));
-/*
-  WifiHelper wifi;
-  // wifi.SetRemoteStationManager ("ns3::AarfWifiManager");
-  wifi.SetStandard(WIFI_PHY_STANDARD_80211a);
-  wifi.SetRemoteStationManager("ns3::ConstantRateWifiManager", "DataMode",
-                               StringValue("OfdmRate24Mbps"));
-
-  YansWifiChannelHelper wifiChannel; // = YansWifiChannelHelper::Default ();
-  wifiChannel.SetPropagationDelay("ns3::ConstantSpeedPropagationDelayModel");
-  wifiChannel.AddPropagationLoss("ns3::ThreeLogDistancePropagationLossModel");
-  wifiChannel.AddPropagationLoss("ns3::NakagamiPropagationLossModel");
-
-  // YansWifiPhy wifiPhy = YansWifiPhy::Default();
-  YansWifiPhyHelper wifiPhyHelper = YansWifiPhyHelper::Default();
-  wifiPhyHelper.SetChannel(wifiChannel.Create());
-  wifiPhyHelper.Set("TxPowerStart", DoubleValue(5));
-  wifiPhyHelper.Set("TxPowerEnd", DoubleValue(5));
-
-  WifiMacHelper wifiMacHelper;
-  wifiMacHelper.SetType("ns3::AdhocWifiMac");
-*/
-  // Create all nodes
+  // Create consumer and producer nodes
   NodeContainer consumerNodes;
-  NetDeviceContainer devices;
   consumerNodes.Create(nodeNum);
   NodeContainer producerNodes;
   producerNodes.Create(1);
 
-  YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
+  // The below set of help put together the required Wi-Fi Network Interface Controllers (NICs)
+  YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default ();
   YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
-  wifiPhy.SetChannel (wifiChannel.Create ());
-  NqosWave80211pMacHelper wifi80211pMac = NqosWaveMacHelper::Default();
-  Wifi80211pHelper 80211pHelper = Wifi80211pHelper::Default ();
-  devices = 80211pHelper.Install (wifiPhy, wifi80211pMac, consumerNodes);
-  802.11pHelper.Install (wifiPhy, wifi80211pMac, producerNodes);
+  Ptr<YansWifiChannel> channel = wifiChannel.Create ();
+  wifiPhy.SetChannel (channel);
+  // ns-3 supports generation of a pcap trace --> Information on received packets -> How does this work and how can it be used?
+  wifiPhy.SetPcapDataLinkType (WifiPhyHelper::DLT_IEEE802_11);
+  NqosWaveMacHelper wifi80211pMac = NqosWaveMacHelper::Default ();
+  Wifi80211pHelper wifi80211p = Wifi80211pHelper::Default ();
+  
+  if (verbose) {
+    wifi80211p.EnableLogComponents ();      // Turn on all Wifi 802.11p logging
+  }
 
-  ////////////////
-  // 1. Install Wifi
-  //NetDeviceContainer wifiNetDevices = wifi.Install(wifiPhyHelper, wifiMacHelper, consumerNodes);
-  //wifiNetDevices = wifi.Install(wifiPhyHelper, wifiMacHelper, producerNodes);
+  wifi80211p.SetRemoteStationManager ("ns3::ConstantRateWifiManager",
+                                       "DataMode",StringValue (phyMode),
+                                       "ControlMode",StringValue (phyMode)); // Need to figure out exactly what this is doing
 
-  // 2. Install Mobility model for vehicles
+  NetDeviceContainer vehicularDevices = wifi80211p.Install(wifiPhy, wifi80211pMac, consumerNodes);
+  NetDeviceContainer trafficLightDevices = wifi80211p.Install(wifiPhy, wifi80211pMac, producerNodes);
+
+  // Should be enabling Pcap tracing can use Wireshark to inspect packets
+  //wifiPhy.EnablePcap ("glossa-cars", vehicularDevices);
+  //wifiPhy.EnablePcap ("glossa-intersection", trafficLightDevices);
+
+  // Mobility for vehicles comes from traceFile -> How does the Ns2MobilityHelper know which nodes to install on
   Ns2MobilityHelper ns2 = Ns2MobilityHelper (traceFile);
-  ns2.Install (); // configure movements for each node, while reading trace file
+  ns2.Install ();
 
-  // 3. Install Mobility model for traffic light
+  // Mobility of traffic light is a fixed position
   MobilityHelper trafficLightMobility;
-  trafficLightMobility.SetPositionAllocator("ns3::GridPositionAllocator",
-    "MinX", DoubleValue(500.0),
-    "MinY", DoubleValue(500.0));
+  Ptr<ListPositionAllocator> posAlloc = CreateObject<ListPositionAllocator> ();
+  posAlloc->Add(Vector (515.0, 515.0, 0.0));
+  trafficLightMobility.SetPositionAllocator (posAlloc);
   trafficLightMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   trafficLightMobility.Install(producerNodes);
 
-  //3. Installing NDN stack
+  //3. Installing NDN stack on consumer and producer nodes -> Look into configuration options
   ndn::StackHelper ndnHelper;
   ndnHelper.SetOldContentStore("ns3::ndn::cs::Lru", "MaxSize", "1000");
   ndnHelper.SetDefaultRoutes(true);
@@ -136,10 +128,6 @@ int main (int argc, char *argv[])
   producerHelper.SetPrefix("/");
   producerHelper.SetAttribute("PayloadSize", StringValue("1200"));
   producerHelper.Install(producerNodes);
-
-  // Configure callback for logging
-  Config::Connect ("/NodeList/*/$ns3::MobilityModel/CourseChange",
-                  MakeBoundCallback (&CourseChange, &os));
 
   Simulator::Stop (Seconds (duration));
   Simulator::Run ();
