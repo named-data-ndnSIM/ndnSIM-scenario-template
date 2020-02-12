@@ -119,15 +119,18 @@ int main (int argc, char *argv[])
   ndn::StrategyChoiceHelper::Install(consumerNodes, "/", "/localhost/nfd/strategy/best-route");
   ndn::StrategyChoiceHelper::Install(producerNodes, "/", "/localhost/nfd/strategy/best-route");
 
-  ndn::AppHelper consumerHelper("ns3::ndn::ConsumerCbr");
-  consumerHelper.SetPrefix("/test/prefix");
-  consumerHelper.SetAttribute("Frequency", DoubleValue(1.0));
-  consumerHelper.Install(consumerNodes);
 
+  // The producer needs a custom application to advertise that it contains SPAT and MAP data
   ndn::AppHelper producerHelper("ns3::ndn::Producer");
   producerHelper.SetPrefix("/");
   producerHelper.SetAttribute("PayloadSize", StringValue("1200"));
   producerHelper.Install(producerNodes);
+
+  // The consumer needsa custom application to request SPAT and MAP data
+  ndn::AppHelper consumerHelper("ns3::ndn::ConsumerCbr");
+  consumerHelper.SetPrefix("/test/prefix");
+  consumerHelper.SetAttribute("Frequency", DoubleValue(1.0));
+  consumerHelper.Install(consumerNodes);
 
   Simulator::Stop (Seconds (duration));
   Simulator::Run ();
