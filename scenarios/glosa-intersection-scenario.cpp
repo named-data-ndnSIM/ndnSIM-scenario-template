@@ -41,6 +41,7 @@ int main (int argc, char *argv[])
   double duration;
   double interval = 1; //seconds between broadcasts
   bool verbose = false;
+  bool network = true;
 
   // Enable logging from the ns2 helper
   LogComponentEnable ("Ns2MobilityHelper",LOG_LEVEL_DEBUG);
@@ -52,6 +53,7 @@ int main (int argc, char *argv[])
   cmd.AddValue ("duration", "Duration of Simulation", duration);
   cmd.AddValue ("logFile", "Log file", logFile);
   cmd.AddValue ("verbose", "turn on all WifiNetDevice log components", verbose);
+  cmd.AddValue ("network", "install the ndn stack on all nodes", network);
   cmd.Parse (argc,argv);
 
   // Check command line arguments
@@ -71,31 +73,6 @@ int main (int argc, char *argv[])
   NodeContainer producerNodes;
   producerNodes.Create(1);
 
-  // The below set of help put together the required Wi-Fi Network Interface Controllers (NICs)
-  YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default ();
-  YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
-  Ptr<YansWifiChannel> channel = wifiChannel.Create ();
-  wifiPhy.SetChannel (channel);
-  // ns-3 supports generation of a pcap trace --> Information on received packets -> How does this work and how can it be used?
-  wifiPhy.SetPcapDataLinkType (WifiPhyHelper::DLT_IEEE802_11);
-  NqosWaveMacHelper wifi80211pMac = NqosWaveMacHelper::Default ();
-  Wifi80211pHelper wifi80211p = Wifi80211pHelper::Default ();
-  
-  if (verbose) {
-    wifi80211p.EnableLogComponents ();      // Turn on all Wifi 802.11p logging
-  }
-
-  wifi80211p.SetRemoteStationManager ("ns3::ConstantRateWifiManager",
-                                       "DataMode",StringValue (phyMode),
-                                       "ControlMode",StringValue (phyMode)); // Need to figure out exactly what this is doing
-
-  NetDeviceContainer vehicularDevices = wifi80211p.Install(wifiPhy, wifi80211pMac, consumerNodes);
-  NetDeviceContainer trafficLightDevices = wifi80211p.Install(wifiPhy, wifi80211pMac, producerNodes);
-
-  // Should be enabling Pcap tracing can use Wireshark to inspect packets
-  //wifiPhy.EnablePcap ("glossa-cars", vehicularDevices);
-  //wifiPhy.EnablePcap ("glossa-intersection", trafficLightDevices);
-
   // Mobility for vehicles comes from traceFile -> How does the Ns2MobilityHelper know which nodes to install on
   Ns2MobilityHelper ns2 = Ns2MobilityHelper (traceFile);
   ns2.Install ();
@@ -103,40 +80,78 @@ int main (int argc, char *argv[])
   // Mobility of traffic light is a fixed position
   MobilityHelper trafficLightMobility;
   Ptr<ListPositionAllocator> posAlloc = CreateObject<ListPositionAllocator> ();
-  posAlloc->Add(Vector (515.0, 515.0, 0.0));
+  posAlloc->Add(Vector (500.0, 405.0, 0.0));
   trafficLightMobility.SetPositionAllocator (posAlloc);
   trafficLightMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   trafficLightMobility.Install(producerNodes);
 
-  //3. Installing NDN stack on consumer and producer nodes -> Look into configuration options
-  ndn::StackHelper ndnHelper;
-  ndnHelper.SetOldContentStore("ns3::ndn::cs::Lru", "MaxSize", "1000");
-  ndnHelper.SetDefaultRoutes(true);
-  ndnHelper.Install(consumerNodes);
-  ndnHelper.Install(producerNodes);
+  if (network) {
+    // The below set of help put together the required Wi-Fi Network Interface Controllers (NICs)
+    YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default ();
+    YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
+    Ptr<YansWifiChannel> channel = wifiChannel.Create ();
+    wifiPhy.SetChannel (channel);
+    // ns-3 supports generation of a pcap trace --> Information on received packets -> How does this work and how can it be used?
+    wifiPhy.SetPcapDataLinkType (WifiPhyHelper::DLT_IEEE802_11);
+    NqosWaveMacHelper wifi80211pMac = NqosWaveMacHelper::Default ();
+    Wifi80211pHelper wifi80211p = Wifi80211pHelper::Default ();
+    
+    if (verbose) {
+      wifi80211p.EnableLogComponents ();      // Turn on all Wifi 802.11p logging
+    }
 
-  // Set BestRoute strategy
-  ndn::StrategyChoiceHelper::Install(consumerNodes, "/", "/localhost/nfd/strategy/best-route");
-  ndn::StrategyChoiceHelper::Install(producerNodes, "/", "/localhost/nfd/strategy/best-route");
+    wifi80211p.SetRemoteStationManager ("ns3::ConstantRateWifiManager",
+                                        "DataMode",StringValue (phyMode),
+                                        "ControlMode",StringValue (phyMode)); // Need to figure out exactly what this is doing
+
+    NetDeviceContainer vehicularDevices = wifi80211p.Install(wifiPhy, wifi80211pMac, consumerNodes);
+    NetDeviceContainer trafficLightDevices = wifi80211p.Install(wifiPhy, wifi80211pMac, producerNodes);
+
+    // Should be enabling Pcap tracing can use Wireshark to inspect packets
+    // wifiPhy.EnablePcap ("glossa-cars", vehicularDevices);
+    // wifiPhy.EnablePcap ("glossa-intersection", trafficLightDevices);
 
 
-  // The producer needs a custom application to advertise that it contains SPAT and MAP data
-  ndn::AppHelper producerHelper("ns3::ndn::Producer");
-  producerHelper.SetPrefix("/");
-  producerHelper.SetAttribute("PayloadSize", StringValue("1200"));
-  producerHelper.Install(producerNodes);
+    //3. Installing NDN stack on consumer and producer nodes -> Look into configuration options
+    ndn::StackHelper ndnHelper;
+    ndnHelper.SetOldContentStore("ns3::ndn::cs::Lru", "MaxSize", "1000");
+    ndnHelper.SetDefaultRoutes(true);
+    ndnHelper.Install(consumerNodes);
+    ndnHelper.Install(producerNodes);
 
-  // The consumer needsa custom application to request SPAT and MAP data
-  ndn::AppHelper consumerHelper("ns3::ndn::ConsumerCbr");
-  consumerHelper.SetPrefix("/test/prefix");
-  consumerHelper.SetAttribute("Frequency", DoubleValue(1.0));
-  consumerHelper.Install(consumerNodes);
+    // Set BestRoute strategy
+    ndn::StrategyChoiceHelper::Install(consumerNodes, "/", "/localhost/nfd/strategy/best-route");
+    ndn::StrategyChoiceHelper::Install(producerNodes, "/", "/localhost/nfd/strategy/best-route");
+
+    // The producer needs a custom application to advertise that it contains SPAT and MAP data
+    ndn::AppHelper producerHelper("ns3::ndn::Producer");
+    producerHelper.SetPrefix("/");
+    producerHelper.SetAttribute("PayloadSize", StringValue("1000")); // This needs to be justified? Why 1000???
+    producerHelper.Install(producerNodes);
+
+    // The consumer needs to request map and spat packets!
+    ndn::AppHelper consumerHelper("ns3::ndn::ConsumerCbr");
+    consumerHelper.SetPrefix("/test/spat");
+    consumerHelper.SetAttribute("Frequency", DoubleValue(1.0));
+    consumerHelper.Install(consumerNodes);
+
+    consumerHelper.SetPrefix("/test/map");
+    consumerHelper.SetAttribute("Frequency", DoubleValue(1.0));
+    consumerHelper.Install(consumerNodes);
+  }
 
   Simulator::Stop (Seconds (duration));
+
+  if (network) {
+    ndn::L3RateTracer::InstallAll("rate-trace.txt", Seconds(1));
+    L2RateTracer::InstallAll("drop-trace.txt", Seconds(1));
+    ndn::CsTracer::InstallAll("cs-trace.txt", Seconds(1));
+  }
+
   Simulator::Run ();
   Simulator::Destroy ();
 
-  os.close (); // close log file
+  os.close ();
   return 0;
 }
 
