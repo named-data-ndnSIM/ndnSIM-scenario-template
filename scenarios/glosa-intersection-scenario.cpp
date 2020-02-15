@@ -108,8 +108,8 @@ int main (int argc, char *argv[])
     NetDeviceContainer trafficLightDevices = wifi80211p.Install(wifiPhy, wifi80211pMac, producerNodes);
 
     // Should be enabling Pcap tracing can use Wireshark to inspect packets
-    // wifiPhy.EnablePcap ("glossa-cars", vehicularDevices);
-    // wifiPhy.EnablePcap ("glossa-intersection", trafficLightDevices);
+    wifiPhy.EnablePcap ("glossa-cars", vehicularDevices);
+    wifiPhy.EnablePcap ("glossa-intersection", trafficLightDevices);
 
 
     //3. Installing NDN stack on consumer and producer nodes -> Look into configuration options
@@ -143,9 +143,8 @@ int main (int argc, char *argv[])
   Simulator::Stop (Seconds (duration));
 
   if (network) {
-    ndn::L3RateTracer::InstallAll("rate-trace.txt", Seconds(1));
-    L2RateTracer::InstallAll("drop-trace.txt", Seconds(1));
-    ndn::CsTracer::InstallAll("cs-trace.txt", Seconds(1));
+    ndn::L3RateTracer::InstallAll("rate-trace.txt", Seconds(0.5));
+    ndn::CsTracer::InstallAll("cs-trace.txt", Seconds(0.5));
   }
 
   Simulator::Run ();
