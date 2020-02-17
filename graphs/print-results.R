@@ -1,25 +1,45 @@
 #!/usr/bin/env Rscript
 library(ggplot2)
 
-#########################
-# Rate trace processing #
-#########################
+# functions
+
+# Setup
+rm(list = ls())
+setwd("~/workspace/github.com/ChrisLynch96/masters-project/scenario-template/graphs")
+
 data = read.table("rate-trace.txt", header=T)
 data$Node = factor(data$Node)
-data$Kilobits <- data$Kilobytes * 8
-data$Type = factor(data$Type)
 
-## data.rtr = data[grep("Rtr", data$Node),]
+# Number of packets
 
-# graph rates on all nodes in Kilobits
-g.all <- ggplot(data, aes(x=Time, y=Kilobits, color=Type)) +
-  geom_point(size=2) +
-  geom_line() +
-  ylab("Packet drop rate [Kbits/s]") +
-  facet_wrap(~ Node) +
-  theme_bw()
+data.packets = data[c("Time", "Node", "PacketRaw")]
 
-png("l2-rate-tracer.png", width=800, height=500)
-print(g.all)
-x = dev.off()
-mail
+data.packets.aggregate = aggregate(PacketRaw ~ Time + Node, data=data.packets, FUN=sum)
+
+g.packets.aggregate <- ggplot(data.packets.aggregate) +
+  geom_line(aes (x=Time, y=PacketRaw), size=1) +
+  ylab("Num. packets") + facet_wrap(~ Node)
+
+png("sum.all.packets.png", width=500, height=250)
+print(g.packets.aggregate)
+retval <- dev.off()
+
+data.packets.all.aggregate = aggregate(PacketRaw ~ Time, data=data.packets.aggregate, FUN=sum)
+
+g.packets.all.aggregate <- ggplot(data.packets.all.aggregate) +
+  geom_line(aes (x=Time, y=PacketRaw), size=1) +
+  ylab("Num. packets")
+
+png("sum.total.packets.png", width=500, height=250)
+print(g.packets.all.aggregate)
+retval <- dev.off()
+
+sum.packets = sum(data.packets.all.aggregate$PacketRaw)
+
+write.csv(data.packets.all.aggregate,"NumPackets.csv", row.names = FALSE)
+
+# Dropped packets
+
+# Successful Deliveries
+
+# Latency
