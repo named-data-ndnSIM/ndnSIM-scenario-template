@@ -106,7 +106,6 @@ int main (int argc, char *argv[])
     ndn::StackHelper ndnHelper;
     ndnHelper.SetDefaultRoutes(true);
     ndnHelper.SetOldContentStore("ns3::ndn::cs::Freshness::Lru","MaxSize", "1000");
-    // ndnHelper.SetOldContentStore("ns3::ndn::cs::Lru","MaxSize", "1000");
     ndnHelper.InstallAll();
 
     // Set BestRoute strategy
