@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <cstdio>
 #include "ns3/core-module.h"
 #include "ns3/mobility-module.h"
 #include "ns3/ns2-mobility-helper.h"
@@ -21,30 +22,19 @@
 using namespace std;
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("GlossaIntersection");
-
-void ReceivePacket (Ptr<Socket> socket)
-{
-  while (socket->Recv ())
-    {
-      NS_LOG_UNCOND ("Received one packet!");
-    }
-}
+NS_LOG_COMPONENT_DEFINE ("GlosaIntersectionScenario");
 
 int main (int argc, char *argv[])
 {
+  // Setup member variables
   std::string phyMode ("OfdmRate6MbpsBW10MHz");
-  uint32_t packetSize = 1000; //bytes -> Need to configure for MAPEM and SPATEM packets being transmitted
   std::string traceFile;
   std::string logFile;
   int nodeNum;
+  double interval = 1; // frequency between requests
   double duration;
-  double interval = 1; //seconds between broadcasts
   bool verbose = false;
   bool network = true;
-
-  // Enable logging from the ns2 helper
-  LogComponentEnable ("Ns2MobilityHelper",LOG_LEVEL_DEBUG);
 
   // Parse command line attribute
   CommandLine cmd;
@@ -63,17 +53,22 @@ int main (int argc, char *argv[])
     return 0;
   }
 
-  // open log file for output
-  std::ofstream os;
-  os.open (logFile.c_str ());
+  // Logging setup
+  if (verbose) {
+    LogComponentEnable ("Ns2MobilityHelper", LOG_LEVEL_DEBUG);
+    LogComponentEnable ("GlosaIntersectionScenario", LOG_LEVEL_DEBUG);
+    LogComponentEnable ("ndn.ModConsumerCbr", LOG_LEVEL_DEBUG);
+    LogComponentEnable ("ndn.ModConsumer", LOG_LEVEL_DEBUG);
+  }
 
   // Create consumer and producer nodes
+  NS_LOG_DEBUG ("Creating " << nodeNum << "consumer nodes and " << 1 << "producer nodes");
   NodeContainer consumerNodes;
   consumerNodes.Create(nodeNum);
   NodeContainer producerNodes;
   producerNodes.Create(1);
 
-  // Mobility for vehicles comes from traceFile -> How does the Ns2MobilityHelper know which nodes to install on
+  // Mobility for vehicles comes from traceFile
   Ns2MobilityHelper ns2 = Ns2MobilityHelper (traceFile);
   ns2.Install ();
 
@@ -86,7 +81,7 @@ int main (int argc, char *argv[])
   trafficLightMobility.Install(producerNodes);
 
   if (network) {
-    // The below set of help put together the required Wi-Fi Network Interface Controllers (NICs)
+    // The below set of helpers put together the required Wi-Fi Network Interface Controllers (NICs)
     YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default ();
     YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
     Ptr<YansWifiChannel> channel = wifiChannel.Create ();
@@ -107,50 +102,42 @@ int main (int argc, char *argv[])
     NetDeviceContainer vehicularDevices = wifi80211p.Install(wifiPhy, wifi80211pMac, consumerNodes);
     NetDeviceContainer trafficLightDevices = wifi80211p.Install(wifiPhy, wifi80211pMac, producerNodes);
 
-    // Should be enabling Pcap tracing can use Wireshark to inspect packets
-    wifiPhy.EnablePcap ("glossa-cars", vehicularDevices);
-    wifiPhy.EnablePcap ("glossa-intersection", trafficLightDevices);
-
-
-    //3. Installing NDN stack on consumer and producer nodes -> Look into configuration options
+    // Configuring content store with freshness. This should remove stale packets
     ndn::StackHelper ndnHelper;
-    ndnHelper.SetOldContentStore("ns3::ndn::cs::Lru", "MaxSize", "1000");
     ndnHelper.SetDefaultRoutes(true);
-    ndnHelper.Install(consumerNodes);
-    ndnHelper.Install(producerNodes);
+    ndnHelper.SetOldContentStore("ns3::ndn::cs::Freshness::Lru","MaxSize", "1000");
+    // ndnHelper.SetOldContentStore("ns3::ndn::cs::Lru","MaxSize", "1000");
+    ndnHelper.InstallAll();
 
     // Set BestRoute strategy
     ndn::StrategyChoiceHelper::Install(consumerNodes, "/", "/localhost/nfd/strategy/best-route");
     ndn::StrategyChoiceHelper::Install(producerNodes, "/", "/localhost/nfd/strategy/best-route");
 
-    // The producer needs a custom application to advertise that it contains SPAT and MAP data
+    // Simulating requests for CAM packets
+    ndn::AppHelper consumerHelper("ModConsumerCbr");
+    consumerHelper.SetPrefix("/test/cam");
+    consumerHelper.SetAttribute("Frequency", DoubleValue(1.0));
+    consumerHelper.Install(consumerNodes);
+
+    // The producer should be satisfying requests for CAM packets
     ndn::AppHelper producerHelper("ns3::ndn::Producer");
     producerHelper.SetPrefix("/");
-    producerHelper.SetAttribute("PayloadSize", StringValue("1000")); // This needs to be justified? Why 1000???
+    producerHelper.SetAttribute("PayloadSize", StringValue("600"));
+    producerHelper.SetAttribute("Freshness", TimeValue (Seconds(1.0)));
     producerHelper.Install(producerNodes);
-
-    // The consumer needs to request map and spat packets!
-    ndn::AppHelper consumerHelper("ns3::ndn::ConsumerCbr");
-    consumerHelper.SetPrefix("/test/spat");
-    consumerHelper.SetAttribute("Frequency", DoubleValue(1.0));
-    consumerHelper.Install(consumerNodes);
-
-    consumerHelper.SetPrefix("/test/map");
-    consumerHelper.SetAttribute("Frequency", DoubleValue(1.0));
-    consumerHelper.Install(consumerNodes);
   }
 
-  Simulator::Stop (Seconds (duration));
+  Simulator::Stop (Seconds (360.0));
 
   if (network) {
-    ndn::L3RateTracer::InstallAll("rate-trace.txt", Seconds(0.5));
-    ndn::CsTracer::InstallAll("cs-trace.txt", Seconds(0.5));
+    ndn::L3RateTracer::InstallAll("rate-trace.txt", Seconds(1));
+    ndn::CsTracer::InstallAll("cs-trace.txt", Seconds(1));
   }
 
   Simulator::Run ();
   Simulator::Destroy ();
 
-  os.close ();
+ // os.close ();
   return 0;
 }
 

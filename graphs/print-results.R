@@ -20,7 +20,7 @@ g.packets.aggregate <- ggplot(data.packets.aggregate) +
   geom_line(aes (x=Time, y=PacketRaw), size=1) +
   ylab("Num. packets") + facet_wrap(~ Node)
 
-png("sum.all.packets.png", width=500, height=250)
+png("sum.all.packets.png", width=1920, height=1080)
 print(g.packets.aggregate)
 retval <- dev.off()
 
@@ -30,7 +30,7 @@ g.packets.all.aggregate <- ggplot(data.packets.all.aggregate) +
   geom_line(aes (x=Time, y=PacketRaw), size=1) +
   ylab("Num. packets")
 
-png("sum.total.packets.png", width=500, height=250)
+png("sum.total.packets.png", width=1920, height=1080)
 print(g.packets.all.aggregate)
 retval <- dev.off()
 
