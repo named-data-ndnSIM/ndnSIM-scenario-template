@@ -75,10 +75,11 @@ ModConsumerCbr::ScheduleNextPacket()
     NS_LOG_DEBUG ("first time sending packet");
     m_sendEvent = Simulator::Schedule(Seconds(0.0), &ModConsumer::SendPacket, this);
     m_firstTime = false;
-  }
-  else if (!m_sendEvent.IsRunning())
-    NS_LOG_DEBUG ("NOT first time sending packet");
+  } else {
     m_sendEvent = Simulator::Schedule(Seconds(1.0 / m_frequency), &ModConsumer::SendPacket, this);
+  }
+  // else if (!m_sendEvent.IsRunning())
+  //   NS_LOG_DEBUG ("NOT first time sending packet");
 }
 
 } // namespace ndn
