@@ -29,10 +29,10 @@ int main (int argc, char *argv[])
   // Setup member variables
   std::string phyMode ("OfdmRate6MbpsBW10MHz");
   std::string traceFile;
-  std::string logFile;
   int nodeNum;
-  double interval = 1; // frequency between requests
   double duration;
+  double interval = 1; // frequency between requests
+  double range = 100;
   bool verbose = false;
   bool network = true;
 
@@ -41,13 +41,13 @@ int main (int argc, char *argv[])
   cmd.AddValue ("traceFile", "Ns2 movement trace file", traceFile);
   cmd.AddValue ("nodeNum", "Number of nodes", nodeNum);
   cmd.AddValue ("duration", "Duration of Simulation", duration);
-  cmd.AddValue ("logFile", "Log file", logFile);
   cmd.AddValue ("verbose", "turn on all WifiNetDevice log components", verbose);
   cmd.AddValue ("network", "install the ndn stack on all nodes", network);
+  cmd.AddValue ("range", "The maximm range for transmission", range);
   cmd.Parse (argc,argv);
 
   // Check command line arguments
-  if (traceFile.empty () || nodeNum <= 0 || duration <= 0 || logFile.empty ())
+  if (traceFile.empty () || nodeNum <= 0 || duration <= 0)
   {
     std::cout << "Make sure to pass all required arguments traceFile, nodeNum, duration and logFile";
     return 0;
@@ -83,10 +83,10 @@ int main (int argc, char *argv[])
     // The below set of helpers put together the required Wi-Fi Network Interface Controllers (NICs)
     YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default ();
     YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
+    wifiChannel.AddPropagationLoss("ns3::RangePropagationLossModel", "MaxRange", DoubleValue(range));
     Ptr<YansWifiChannel> channel = wifiChannel.Create ();
     wifiPhy.SetChannel (channel);
-    // ns-3 supports generation of a pcap trace --> Information on received packets -> How does this work and how can it be used?
-    wifiPhy.SetPcapDataLinkType (WifiPhyHelper::DLT_IEEE802_11);
+    // wifiPhy.SetPcapDataLinkType (WifiPhyHelper::DLT_IEEE802_11);
     NqosWaveMacHelper wifi80211pMac = NqosWaveMacHelper::Default ();
     Wifi80211pHelper wifi80211p = Wifi80211pHelper::Default ();
     
