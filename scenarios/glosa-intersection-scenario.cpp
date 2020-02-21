@@ -62,7 +62,6 @@ int main (int argc, char *argv[])
   }
 
   // Create consumer and producer nodes
-  NS_LOG_DEBUG ("Creating " << nodeNum << "consumer nodes and " << 1 << "producer nodes");
   NodeContainer consumerNodes;
   consumerNodes.Create(nodeNum);
   NodeContainer producerNodes;
@@ -72,7 +71,7 @@ int main (int argc, char *argv[])
   Ns2MobilityHelper ns2 = Ns2MobilityHelper (traceFile);
   ns2.Install ();
 
-  // Mobility of traffic light is a fixed position
+  // Mobility of traffic light is fixed position
   MobilityHelper trafficLightMobility;
   Ptr<ListPositionAllocator> posAlloc = CreateObject<ListPositionAllocator> ();
   posAlloc->Add(Vector (500.0, 405.0, 0.0));
@@ -92,7 +91,7 @@ int main (int argc, char *argv[])
     Wifi80211pHelper wifi80211p = Wifi80211pHelper::Default ();
     
     if (verbose) {
-      wifi80211p.EnableLogComponents ();      // Turn on all Wifi 802.11p logging
+      wifi80211p.EnableLogComponents ();
     }
 
     wifi80211p.SetRemoteStationManager ("ns3::ConstantRateWifiManager",
@@ -114,29 +113,32 @@ int main (int argc, char *argv[])
 
     // Simulating requests for CAM packets
     ndn::AppHelper consumerHelper("ModConsumerCbr");
+    consumerHelper.SetPrefix("/test/dummy");
+    consumerHelper.SetAttribute("Frequency", DoubleValue(1.0));
+    consumerHelper.Install(consumerNodes);
+
     consumerHelper.SetPrefix("/test/cam");
     consumerHelper.SetAttribute("Frequency", DoubleValue(1.0));
     consumerHelper.Install(consumerNodes);
 
     // The producer should be satisfying requests for CAM packets
     ndn::AppHelper producerHelper("ns3::ndn::Producer");
-    producerHelper.SetPrefix("/");
+    producerHelper.SetPrefix("/test/cam");
     producerHelper.SetAttribute("PayloadSize", StringValue("600"));
     producerHelper.SetAttribute("Freshness", TimeValue (Seconds(1.0)));
     producerHelper.Install(producerNodes);
   }
 
-  Simulator::Stop (Seconds (360.0));
+  Simulator::Stop (Seconds (100.0));
 
   if (network) {
-    ndn::L3RateTracer::InstallAll("rate-trace.txt", Seconds(1));
-    ndn::CsTracer::InstallAll("cs-trace.txt", Seconds(1));
+    ndn::L3RateTracer::InstallAll("./graphs/data/rate-trace.txt", Seconds(1));
+    ndn::CsTracer::InstallAll("./graphs/data/cs-trace.txt", Seconds(1));
   }
 
   Simulator::Run ();
   Simulator::Destroy ();
 
- // os.close ();
   return 0;
 }
 

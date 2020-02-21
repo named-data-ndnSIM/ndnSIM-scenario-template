@@ -71,11 +71,11 @@ ModConsumerCbr::~ModConsumerCbr()
 void
 ModConsumerCbr::ScheduleNextPacket()
 {
+  NS_LOG_DEBUG ("m_sendEvent: " << m_sendEvent.IsRunning());
   if (m_firstTime) {
-    NS_LOG_DEBUG ("first time sending packet");
     m_sendEvent = Simulator::Schedule(Seconds(0.0), &ModConsumer::SendPacket, this);
     m_firstTime = false;
-  } else {
+  } else if (!m_sendEvent.IsRunning()) {
     m_sendEvent = Simulator::Schedule(Seconds(1.0 / m_frequency), &ModConsumer::SendPacket, this);
   }
   // else if (!m_sendEvent.IsRunning())

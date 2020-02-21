@@ -1,0 +1,10 @@
+<routes>
+ <vehicles>
+ <flow id="f11" begin="0" end="10000" from="1i" to="1o" vehsPerHour="200"/>
+ <flow id="f12" begin="0" end="10000" from="1i" to="2o" vehsPerHour="200"/>
+ <flow id="f14" begin="0" end="10000" from="1i" to="4o" vehsPerHour="200"/>
+ <flow id="f21" begin="0" end="10000" from="2i" to="1o" vehsPerHour="200"/>
+ <flow id="f34" begin="0" end="10000" from="3i" to="4o" vehsPerHour="200"/>
+ <flow id="f43" begin="0" end="10000" from="4i" to="3o" vehsPerHour="200"/>
+ </vehicles>
+</routes>
