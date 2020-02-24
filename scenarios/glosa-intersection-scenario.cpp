@@ -1,7 +1,3 @@
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <cstdio>
 #include "ns3/core-module.h"
 #include "ns3/mobility-module.h"
 #include "ns3/ns2-mobility-helper.h"
@@ -26,13 +22,15 @@ NS_LOG_COMPONENT_DEFINE ("GlosaIntersectionScenario");
 
 int main (int argc, char *argv[])
 {
+  std::set<std::string> policies = nfd::fw::UnsolicitedDataPolicy::getPolicyNames();
+
   // Setup member variables
   std::string phyMode ("OfdmRate6MbpsBW10MHz");
   std::string traceFile;
   int nodeNum;
   double duration;
   double interval = 1; // frequency between requests
-  double range = 100;
+  double range = 400;
   bool verbose = false;
   bool network = true;
 
@@ -80,14 +78,17 @@ int main (int argc, char *argv[])
   trafficLightMobility.Install(producerNodes);
 
   if (network) {
+    Config::SetDefault ("ns3::RangePropagationLossModel::MaxRange", DoubleValue (range));
+
     // The below set of helpers put together the required Wi-Fi Network Interface Controllers (NICs)
-    YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default ();
     YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
-    wifiChannel.AddPropagationLoss("ns3::RangePropagationLossModel", "MaxRange", DoubleValue(range));
-    Ptr<YansWifiChannel> channel = wifiChannel.Create ();
-    wifiPhy.SetChannel (channel);
-    // wifiPhy.SetPcapDataLinkType (WifiPhyHelper::DLT_IEEE802_11);
-    NqosWaveMacHelper wifi80211pMac = NqosWaveMacHelper::Default ();
+    wifiChannel.AddPropagationLoss("ns3::RangePropagationLossModel");
+
+    YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default ();
+    wifiPhy.SetPcapDataLinkType (WifiPhyHelper::DLT_IEEE802_11);
+    wifiPhy.SetChannel (wifiChannel.Create());
+
+    NqosWaveMacHelper wifi80211pMac = NqosWaveMacHelper::Default (); // could this be affecting range?
     Wifi80211pHelper wifi80211p = Wifi80211pHelper::Default ();
     
     if (verbose) {
@@ -108,17 +109,16 @@ int main (int argc, char *argv[])
     ndnHelper.InstallAll();
 
     // Set BestRoute strategy
-    ndn::StrategyChoiceHelper::Install(consumerNodes, "/", "/localhost/nfd/strategy/best-route");
-    ndn::StrategyChoiceHelper::Install(producerNodes, "/", "/localhost/nfd/strategy/best-route");
+    ndn::StrategyChoiceHelper::InstallAll("/", "/localhost/nfd/strategy/best-route");
 
     // Simulating requests for CAM packets
     ndn::AppHelper consumerHelper("ModConsumerCbr");
     consumerHelper.SetPrefix("/test/dummy");
-    consumerHelper.SetAttribute("Frequency", DoubleValue(1.0));
+    consumerHelper.SetAttribute("Frequency", DoubleValue(interval));
     consumerHelper.Install(consumerNodes);
 
     consumerHelper.SetPrefix("/test/cam");
-    consumerHelper.SetAttribute("Frequency", DoubleValue(1.0));
+    consumerHelper.SetAttribute("Frequency", DoubleValue(interval));
     consumerHelper.Install(consumerNodes);
 
     // The producer should be satisfying requests for CAM packets
@@ -134,6 +134,7 @@ int main (int argc, char *argv[])
   if (network) {
     ndn::L3RateTracer::InstallAll("./graphs/data/rate-trace.txt", Seconds(1));
     ndn::CsTracer::InstallAll("./graphs/data/cs-trace.txt", Seconds(1));
+    ndn::AppDelayTracer::InstallAll("./graphs/data/app-delays-trace.txt");
   }
 
   Simulator::Run ();

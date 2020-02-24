@@ -62,6 +62,7 @@ ModConsumerCbr::ModConsumerCbr()
 {
   NS_LOG_FUNCTION_NOARGS();
   m_seqMax = std::numeric_limits<uint32_t>::max();
+
 }
 
 ModConsumerCbr::~ModConsumerCbr()
@@ -78,8 +79,6 @@ ModConsumerCbr::ScheduleNextPacket()
   } else if (!m_sendEvent.IsRunning()) {
     m_sendEvent = Simulator::Schedule(Seconds(1.0 / m_frequency), &ModConsumer::SendPacket, this);
   }
-  // else if (!m_sendEvent.IsRunning())
-  //   NS_LOG_DEBUG ("NOT first time sending packet");
 }
 
 } // namespace ndn
