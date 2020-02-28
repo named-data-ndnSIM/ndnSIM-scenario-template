@@ -65,3 +65,49 @@ cat("Average delay:", mean.delay)
 ### Number of data packets received is num_rows/2
 num.rows = nrow(data.delay)
 cat("Number of data packets received:", num.rows/2)
+
+
+## Combining
+
+### Number of packets
+
+purendn.packets = read.csv("../results/pure-ndn/60km-200vh-1rps-100m/num.packets.csv")
+unsolicited.packets = read.csv("../results/unsolicited/60km-200vh-1rps-100m/num.packets.csv")
+
+g.packets.compare <- ggplot(purendn.packets,aes(x=Time,y=PacketRaw)) +geom_line(colour='blue') + geom_line(data=unsolicited.packets,colour='red')
+
+png("../results/sum.packets.compare.png", width=1920, height=1080)
+print(g.packets.compare)
+retval <- dev.off()
+
+### Latency
+
+purendn.delay = read.csv("../results/pure-ndn/60km-200vh-1rps-100m/last.delay.csv")
+unsolicited.delay = read.csv("../results/unsolicited/60km-200vh-1rps-100m/last.delay.csv")
+
+g.delay.compare <- ggplot(purendn.delay,aes(x=Time, y=DelayS)) +
+                    geom_line(colour='blue') +
+                    geom_point(colour = 'blue') +
+                    geom_line(data=unsolicited.delay ,colour='red') +
+                    geom_point(data = unsolicited.delay, colour = 'red') +
+                    ggtitle("Comparison of RTT between pure ndn and unsolicited acceptance") +
+                    labs(x = "Time (s)", y = "RTT (s)")
+
+png("../results/delay.compare.png", width=800, height=600)
+print(g.delay.compare)
+retval <- dev.off()
+
+purendn.packets <- read.csv("../results/pure-ndn/60km-200vh-1rps-100m/num.packets.csv")
+unsolicited.delay = read.csv("../results/unsolicited/60km-200vh-1rps-100m/num.packets.csv")
+
+g.packets.compare <- ggplot(purendn.packets, aes(x=Time, y=PacketRaw)) +
+  geom_line(colour='blue') +
+  geom_point(colour = 'blue') +
+  geom_line(data=unsolicited.delay ,colour='red') +
+  geom_point(data = unsolicited.delay, colour = 'red') +
+  ggtitle("Comparison of Total Packets between pure ndn and unsolicited acceptance") +
+  labs(x = "Time (s)", y = "Packets")
+
+png("../results/packets.compare.png", width=800, height=600)
+print(g.packets.compare)
+retval <- dev.off()
