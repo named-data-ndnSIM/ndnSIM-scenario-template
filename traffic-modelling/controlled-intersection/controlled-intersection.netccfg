@@ -1,0 +1,13 @@
+<configuration>
+<input>
+ <node-files value="controlled-intersection.nod.xml"/>
+ <edge-files value="controlled-intersection.edg.xml"/>
+ <connection-files value="controlled-intersection.con.xml"/>
+</input>
+<output>
+    <output-file value="controlled-intersection.net.xml"/>
+</output>
+<report>
+     <verbose value="true"/>
+</report>
+</configuration>

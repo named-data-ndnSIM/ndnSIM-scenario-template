@@ -228,7 +228,7 @@ ModConsumer::OnData(shared_ptr<const Data> data)
   if (!m_active)
     return;
 
-  App::OnData(data); // tracing inside
+  App::OnData(data);
 
   NS_LOG_FUNCTION(this << data);
 
@@ -258,6 +258,7 @@ ModConsumer::OnData(shared_ptr<const Data> data)
   if (entry != m_seqLastDelay.end()) {  // existence check
     m_lastRetransmittedInterestDataDelay(this, seq, Simulator::Now() - entry->time, hopCount);
     NS_LOG_DEBUG ("Updating last packet delay, seq: " << seq << " time: " << Simulator::Now() - entry->time);
+
   }
 
   // If there exists an entry for full delay then update it
@@ -303,17 +304,21 @@ ModConsumer::OnTimeout(uint32_t sequenceNumber)
 void
 ModConsumer::WillSendOutInterest(uint32_t sequenceNumber)
 {
-  //  NS_LOG_DEBUG("Trying to add " << sequenceNumber << " with " << Simulator::Now() << ". already "
-  //                               << m_seqTimeouts.size() << " items");
-
+  // Set of timeouts
   m_seqTimeouts.insert(SeqTimeout(sequenceNumber, Simulator::Now()));
+
+  // Set of full delay for interest
   m_seqFullDelay.insert(SeqTimeout(sequenceNumber, Simulator::Now()));
 
+
+  // Set of last delay for interest
   m_seqLastDelay.erase(sequenceNumber);
   m_seqLastDelay.insert(SeqTimeout(sequenceNumber, Simulator::Now()));
 
+  // Number of retransmissions for interest
   m_seqRetxCounts[sequenceNumber]++;
 
+  // Updating the mean round trip time
   m_rtt->SentSeq(SequenceNumber32(sequenceNumber), 1);
 }
 
