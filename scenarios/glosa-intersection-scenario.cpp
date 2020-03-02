@@ -22,14 +22,12 @@ NS_LOG_COMPONENT_DEFINE ("GlosaIntersectionScenario");
 
 int main (int argc, char *argv[])
 {
-  std::set<std::string> policies = nfd::fw::UnsolicitedDataPolicy::getPolicyNames();
-
   // Setup member variables
   std::string phyMode ("OfdmRate6MbpsBW10MHz");
   std::string traceFile;
   int nodeNum;
   double duration;
-  double interval = 1; // frequency between requests
+  double interval = 30; // frequency between requests in seconds
   double range = 400;
   bool verbose = false;
   bool network = true;
@@ -57,6 +55,7 @@ int main (int argc, char *argv[])
     LogComponentEnable ("GlosaIntersectionScenario", LOG_LEVEL_DEBUG);
     LogComponentEnable ("ndn.ModConsumerCbr", LOG_LEVEL_DEBUG);
     LogComponentEnable ("ndn.ModConsumer", LOG_LEVEL_DEBUG);
+    LogComponentEnable ("ndn.ProactiveProducer", LOG_LEVEL_DEBUG);
   }
 
   // Create consumer and producer nodes
@@ -122,10 +121,11 @@ int main (int argc, char *argv[])
     consumerHelper.Install(consumerNodes);
 
     // The producer should be satisfying requests for CAM packets
-    ndn::AppHelper producerHelper("ns3::ndn::Producer");
+    ndn::AppHelper producerHelper("ns3::ndn::ProactiveProducer");
     producerHelper.SetPrefix("/test/cam");
     producerHelper.SetAttribute("PayloadSize", StringValue("600"));
     producerHelper.SetAttribute("Freshness", TimeValue (Seconds(1.0)));
+    producerHelper.SetAttribute("Frequency", DoubleValue(1));
     producerHelper.Install(producerNodes);
   }
 

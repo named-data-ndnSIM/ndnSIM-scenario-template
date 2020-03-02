@@ -1,22 +1,3 @@
-/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
-/**
- * Copyright (c) 2011-2015  Regents of the University of California.
- *
- * This file is part of ndnSIM. See AUTHORS for complete list of ndnSIM authors and
- * contributors.
- *
- * ndnSIM is free software: you can redistribute it and/or modify it under the terms
- * of the GNU General Public License as published by the Free Software Foundation,
- * either version 3 of the License, or (at your option) any later version.
- *
- * ndnSIM is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
- * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
- * PURPOSE.  See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * ndnSIM, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
- **/
-
 #include "modified-consumer.hpp"
 #include "ns3/ptr.h"
 #include "ns3/log.h"
@@ -166,7 +147,7 @@ ModConsumer::SendPacket()
   NS_LOG_FUNCTION_NOARGS();
 
   // Will be an invalid packet
-  uint32_t seq = std::numeric_limits<uint32_t>::max(); // invalid
+  // uint32_t seq = std::numeric_limits<uint32_t>::max(); // invalid
 
   /*
     if the integer is positice the loop runs infinitely --> poor code
@@ -176,27 +157,27 @@ ModConsumer::SendPacket()
     - removes packet from list of retransmissions
     - then transmits that?
   */
-  while (m_retxSeqs.size()) {
-    seq = *m_retxSeqs.begin();
-    m_retxSeqs.erase(m_retxSeqs.begin());
-    break;
-  }
+  // while (m_retxSeqs.size()) {
+  //   seq = *m_retxSeqs.begin();
+  //   m_retxSeqs.erase(m_retxSeqs.begin());
+  //   break;
+  // }
   
-  // will check fail conditions or increment sequence
-  if (seq == std::numeric_limits<uint32_t>::max()) {
-    // NS_LOG_DEBUG ("Reached max Sequence: " << seq << " max_seq: " << m_seq);
-    if (m_seqMax != std::numeric_limits<uint32_t>::max()) {
-      if (m_seq >= m_seqMax) {
-        NS_LOG_DEBUG ("maximum sequence number has been requested, m_seq: " << m_seq << " m_seqMax: " << m_seqMax);
-        return; // we are totally done
-      }
-    }
+  // // will check fail conditions or increment sequence
+  // if (seq == std::numeric_limits<uint32_t>::max()) {
+  //   // NS_LOG_DEBUG ("Reached max Sequence: " << seq << " max_seq: " << m_seq);
+  //   if (m_seqMax != std::numeric_limits<uint32_t>::max()) {
+  //     if (m_seq >= m_seqMax) {
+  //       NS_LOG_DEBUG ("maximum sequence number has been requested, m_seq: " << m_seq << " m_seqMax: " << m_seqMax);
+  //       return; // we are totally done
+  //     }
+  //   }
 
-    seq = m_seq++;
-  }
+  //   seq = m_seq++;
+  // }
 
   shared_ptr<Name> nameWithSequence = make_shared<Name>(m_interestName);
-  nameWithSequence->appendSequenceNumber(seq);
+  // nameWithSequence->appendSequenceNumber(seq);
 
   shared_ptr<Interest> interest = make_shared<Interest>();
   interest->setNonce(m_rand->GetValue(0, std::numeric_limits<uint32_t>::max()));
@@ -209,7 +190,7 @@ ModConsumer::SendPacket()
   // NS_LOG_DEBUG ("Requesting Interest: \n" << *interest);
   // NS_LOG_INFO("> Interest for " << seq);
 
-  WillSendOutInterest(seq);
+  // WillSendOutInterest(seq);
 
   m_transmittedInterests(interest, this, m_face);
   m_appLink->onReceiveInterest(*interest);
@@ -236,9 +217,9 @@ ModConsumer::OnData(shared_ptr<const Data> data)
     1. Getting sequence number from data packet
     2. Logging what was received
   */
-  // This could be a problem......
-  uint32_t seq = data->getName().at(-1).toSequenceNumber();
-  NS_LOG_DEBUG("< DATA for " << seq);
+  // This could be a problem...... -> it's making the assumption that the data has a sequence number...
+  // uint32_t seq = data->getName().at(-1).toSequenceNumber();
+  // NS_LOG_DEBUG("< DATA for " << seq);
   NS_LOG_DEBUG ("Received content object: " << boost::cref(*data));
 
   // Getting Hop count 
@@ -254,28 +235,28 @@ ModConsumer::OnData(shared_ptr<const Data> data)
   // The below code will be very important in calculating RTT
 
   // If there exists an entry for last delay then update it
-  SeqTimeoutsContainer::iterator entry = m_seqLastDelay.find(seq);
-  if (entry != m_seqLastDelay.end()) {  // existence check
-    m_lastRetransmittedInterestDataDelay(this, seq, Simulator::Now() - entry->time, hopCount);
-    NS_LOG_DEBUG ("Updating last packet delay, seq: " << seq << " time: " << Simulator::Now() - entry->time);
+  // SeqTimeoutsContainer::iterator entry = m_seqLastDelay.find(seq);
+  // if (entry != m_seqLastDelay.end()) {  // existence check
+  //   m_lastRetransmittedInterestDataDelay(this, seq, Simulator::Now() - entry->time, hopCount);
+  //   NS_LOG_DEBUG ("Updating last packet delay, seq: " << seq << " time: " << Simulator::Now() - entry->time);
 
-  }
+  // }
 
   // If there exists an entry for full delay then update it
-  entry = m_seqFullDelay.find(seq);
-  if (entry != m_seqFullDelay.end()) {
-    m_firstInterestDataDelay(this, seq, Simulator::Now() - entry->time, m_seqRetxCounts[seq], hopCount);
-    NS_LOG_DEBUG ("Updating full packet delay, seq: " << seq << " time: " << Simulator::Now() - entry->time);
-  }
+  // entry = m_seqFullDelay.find(seq);
+  // if (entry != m_seqFullDelay.end()) {
+  //   m_firstInterestDataDelay(this, seq, Simulator::Now() - entry->time, m_seqRetxCounts[seq], hopCount);
+  //   NS_LOG_DEBUG ("Updating full packet delay, seq: " << seq << " time: " << Simulator::Now() - entry->time);
+  // }
 
-  m_seqRetxCounts.erase(seq);
-  m_seqFullDelay.erase(seq);
-  m_seqLastDelay.erase(seq);
+  // m_seqRetxCounts.erase(seq);
+  // m_seqFullDelay.erase(seq);
+  // m_seqLastDelay.erase(seq);
 
-  m_seqTimeouts.erase(seq);
-  m_retxSeqs.erase(seq);
+  // m_seqTimeouts.erase(seq);
+  // m_retxSeqs.erase(seq);
 
-  m_rtt->AckSeq(SequenceNumber32(seq));
+  // m_rtt->AckSeq(SequenceNumber32(seq));
 }
 
 void

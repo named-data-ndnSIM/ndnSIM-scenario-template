@@ -65,6 +65,7 @@ ModConsumerCbr::ModConsumerCbr()
 
 }
 
+// this is a destructor
 ModConsumerCbr::~ModConsumerCbr()
 {
 }
@@ -77,7 +78,7 @@ ModConsumerCbr::ScheduleNextPacket()
     m_sendEvent = Simulator::Schedule(Seconds(0.0), &ModConsumer::SendPacket, this);
     m_firstTime = false;
   } else if (!m_sendEvent.IsRunning()) {
-    m_sendEvent = Simulator::Schedule(Seconds(1.0 / m_frequency), &ModConsumer::SendPacket, this);
+    m_sendEvent = Simulator::Schedule(Seconds(m_frequency), &ModConsumer::SendPacket, this);
   }
 }
 

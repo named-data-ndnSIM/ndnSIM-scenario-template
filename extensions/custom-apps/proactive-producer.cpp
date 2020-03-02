@@ -1,0 +1,155 @@
+#include "proactive-producer.hpp"
+#include "ns3/log.h"
+#include "ns3/string.h"
+#include "ns3/uinteger.h"
+#include "ns3/packet.h"
+#include "ns3/simulator.h"
+#include "ns3/double.h"
+
+#include "model/ndn-l3-protocol.hpp"
+#include "helper/ndn-fib-helper.hpp"
+
+#include <memory>
+
+NS_LOG_COMPONENT_DEFINE("ndn.ProactiveProducer");
+
+namespace ns3 {
+namespace ndn {
+
+NS_OBJECT_ENSURE_REGISTERED(ProactiveProducer);
+
+TypeId
+ProactiveProducer::GetTypeId(void)
+{
+  static TypeId tid =
+    TypeId("ns3::ndn::ProactiveProducer")
+      .SetGroupName("Ndn")
+      .SetParent<App>()
+      .AddConstructor<ProactiveProducer>()
+
+      .AddAttribute("Prefix", "Prefix, for which Proactive Producer has the data", StringValue("/"),
+                    MakeNameAccessor(&ProactiveProducer::m_prefix), MakeNameChecker())
+
+      .AddAttribute(
+         "Postfix",
+         "Postfix that is added to the output data (e.g., for adding producer-uniqueness)",
+         StringValue("/"), MakeNameAccessor(&ProactiveProducer::m_postfix), MakeNameChecker())
+
+      .AddAttribute("PayloadSize", "Virtual payload size for Content packets", UintegerValue(1024),
+                    MakeUintegerAccessor(&ProactiveProducer::m_virtualPayloadSize),
+                    MakeUintegerChecker<uint32_t>())
+
+      .AddAttribute("Freshness", "Freshness of data packets, if 0, then unlimited freshness",
+                    TimeValue(Seconds(0)), MakeTimeAccessor(&ProactiveProducer::m_freshness),
+                    MakeTimeChecker())
+
+      .AddAttribute("Frequency", "Frequency of data packet broadcasts", StringValue("1.0"),
+                    MakeDoubleAccessor(&ProactiveProducer::m_frequency), MakeDoubleChecker<double>())
+
+      .AddAttribute(
+         "Signature",
+         "Fake signature, 0 valid signature (default), other values application-specific",
+         UintegerValue(0), MakeUintegerAccessor(&ProactiveProducer::m_signature),
+         MakeUintegerChecker<uint32_t>())
+
+      .AddAttribute("KeyLocator",
+                    "Name to be used for key locator.  If root, then key locator is not used",
+                    NameValue(), MakeNameAccessor(&ProactiveProducer::m_keyLocator), MakeNameChecker());
+  return tid;
+}
+
+// The code after the colon is member variable initialization...
+ProactiveProducer::ProactiveProducer()
+  : m_frequency(1.0)
+  , m_firstTime(true)
+{
+  NS_LOG_FUNCTION_NOARGS();
+}
+
+// inherited from Application base class.
+void
+ProactiveProducer::StartApplication()
+{
+  NS_LOG_FUNCTION_NOARGS();
+  App::StartApplication();
+
+  FibHelper::AddRoute(GetNode(), m_prefix, m_face, 0);
+  ScheduleNextPacket();
+}
+
+void
+ProactiveProducer::StopApplication()
+{
+  NS_LOG_FUNCTION_NOARGS();
+
+  Simulator::Cancel(m_sendEvent);
+
+  App::StopApplication();
+}
+
+void
+ProactiveProducer::OnInterest(shared_ptr<const Interest> interest)
+{
+  App::OnInterest(interest); // tracing inside
+
+  NS_LOG_FUNCTION(this << interest);
+
+  if (!m_active)
+    return;
+
+  ProactiveProducer::SendData(interest->getName());
+}
+
+void
+ProactiveProducer::SendData(Name dataName)
+{
+  // dataName.append(m_postfix);
+  // dataName.appendVersion();
+  if (!m_active)
+    return;
+
+  NS_LOG_FUNCTION_NOARGS();
+
+  auto data = make_shared<Data>();
+  data->setName(dataName);
+  data->setFreshnessPeriod(::ndn::time::milliseconds(m_freshness.GetMilliSeconds()));
+
+  data->setContent(make_shared< ::ndn::Buffer>(m_virtualPayloadSize));
+
+  Signature signature;
+  SignatureInfo signatureInfo(static_cast< ::ndn::tlv::SignatureTypeValue>(255));
+
+  if (m_keyLocator.size() > 0) {
+    signatureInfo.setKeyLocator(m_keyLocator);
+  }
+
+  signature.setInfo(signatureInfo);
+  signature.setValue(::ndn::makeNonNegativeIntegerBlock(::ndn::tlv::SignatureValue, m_signature));
+
+  data->setSignature(signature);
+
+  NS_LOG_INFO("node(" << GetNode()->GetId() << ") responding with Data: " << data->getName());
+
+  // to create real wire encoding
+  data->wireEncode();
+
+  m_transmittedDatas(data, this, m_face);
+  m_appLink->onReceiveData(*data); 
+
+  ScheduleNextPacket();
+}
+
+void
+ProactiveProducer::ScheduleNextPacket()
+{
+  NS_LOG_DEBUG ("m_sendEvent: " << m_sendEvent.IsRunning());
+  if (m_firstTime) {
+    m_sendEvent = Simulator::Schedule(Seconds(0.5), &ProactiveProducer::SendData, this, m_prefix);
+    m_firstTime = false;
+  } else if (!m_sendEvent.IsRunning()) {
+    m_sendEvent = Simulator::Schedule(Seconds(m_frequency), &ProactiveProducer::SendData, this, m_prefix);
+  }
+}
+
+} // namespace ndn
+} // namespace ns3
