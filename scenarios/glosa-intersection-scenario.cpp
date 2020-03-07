@@ -68,7 +68,7 @@ int main (int argc, char *argv[])
   Ns2MobilityHelper ns2 = Ns2MobilityHelper (traceFile);
   ns2.Install ();
 
-  // Mobility of traffic light is fixed position
+  // Mobility of traffic light is a fixed position ~intersection of nodes
   MobilityHelper trafficLightMobility;
   Ptr<ListPositionAllocator> posAlloc = CreateObject<ListPositionAllocator> ();
   posAlloc->Add(Vector (500.0, 405.0, 0.0));
@@ -101,14 +101,12 @@ int main (int argc, char *argv[])
     NetDeviceContainer vehicularDevices = wifi80211p.Install(wifiPhy, wifi80211pMac, consumerNodes);
     NetDeviceContainer trafficLightDevices = wifi80211p.Install(wifiPhy, wifi80211pMac, producerNodes);
 
-    // Configuring content store with freshness. This should remove stale packets
     ndn::StackHelper ndnHelper;
     ndnHelper.SetDefaultRoutes(true);
     ndnHelper.SetOldContentStore("ns3::ndn::cs::Freshness::Lru","MaxSize", "1000");
     ndnHelper.InstallAll();
 
-    // Set BestRoute strategy
-    ndn::StrategyChoiceHelper::InstallAll("/", "/localhost/nfd/strategy/`");
+    ndn::StrategyChoiceHelper::InstallAll("/", "/localhost/nfd/strategy/best-route");
 
     // Simulating requests for CAM packets
     ndn::AppHelper consumerHelper("ModConsumerCbr");
