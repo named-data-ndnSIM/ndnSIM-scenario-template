@@ -147,7 +147,7 @@ ModConsumer::SendPacket()
   NS_LOG_FUNCTION_NOARGS();
 
   // Will be an invalid packet
-  // uint32_t seq = std::numeric_limits<uint32_t>::max(); // invalid
+  uint32_t seq = std::numeric_limits<uint32_t>::max(); // invalid
 
   /*
     if the integer is positice the loop runs infinitely --> poor code
@@ -157,27 +157,26 @@ ModConsumer::SendPacket()
     - removes packet from list of retransmissions
     - then transmits that?
   */
-  // while (m_retxSeqs.size()) {
-  //   seq = *m_retxSeqs.begin();
-  //   m_retxSeqs.erase(m_retxSeqs.begin());
-  //   break;
-  // }
+  while (m_retxSeqs.size()) {
+    seq = *m_retxSeqs.begin();
+    m_retxSeqs.erase(m_retxSeqs.begin());
+    break;
+  }
   
-  // // will check fail conditions or increment sequence
-  // if (seq == std::numeric_limits<uint32_t>::max()) {
-  //   // NS_LOG_DEBUG ("Reached max Sequence: " << seq << " max_seq: " << m_seq);
-  //   if (m_seqMax != std::numeric_limits<uint32_t>::max()) {
-  //     if (m_seq >= m_seqMax) {
-  //       NS_LOG_DEBUG ("maximum sequence number has been requested, m_seq: " << m_seq << " m_seqMax: " << m_seqMax);
-  //       return; // we are totally done
-  //     }
-  //   }
+  // will check fail conditions or increment sequence
+  if (seq == std::numeric_limits<uint32_t>::max()) {
+    if (m_seqMax != std::numeric_limits<uint32_t>::max()) {
+      if (m_seq >= m_seqMax) {
+        NS_LOG_DEBUG ("maximum sequence number has been requested, m_seq: " << m_seq << " m_seqMax: " << m_seqMax);
+        return; // we are totally done
+      }
+    }
 
-  //   seq = m_seq++;
-  // }
+    seq = m_seq++;
+  }
 
   shared_ptr<Name> nameWithSequence = make_shared<Name>(m_interestName);
-  // nameWithSequence->appendSequenceNumber(seq);
+  nameWithSequence->appendSequenceNumber(seq);
 
   shared_ptr<Interest> interest = make_shared<Interest>();
   interest->setNonce(m_rand->GetValue(0, std::numeric_limits<uint32_t>::max()));
@@ -187,10 +186,10 @@ ModConsumer::SendPacket()
   interest->setInterestLifetime(interestLifeTime);
   interest->setMustBeFresh(true);
 
-  // NS_LOG_DEBUG ("Requesting Interest: \n" << *interest);
-  // NS_LOG_INFO("> Interest for " << seq);
+  NS_LOG_DEBUG ("Requesting Interest: \n" << *interest);
+  NS_LOG_INFO("> Interest for " << seq);
 
-  // WillSendOutInterest(seq);
+  WillSendOutInterest(seq);
 
   m_transmittedInterests(interest, this, m_face);
   m_appLink->onReceiveInterest(*interest);
@@ -218,8 +217,8 @@ ModConsumer::OnData(shared_ptr<const Data> data)
     2. Logging what was received
   */
   // This could be a problem...... -> it's making the assumption that the data has a sequence number...
-  // uint32_t seq = data->getName().at(-1).toSequenceNumber();
-  // NS_LOG_DEBUG("< DATA for " << seq);
+  uint32_t seq = data->getName().at(-1).toSequenceNumber();
+  NS_LOG_DEBUG("< DATA for " << seq);
   NS_LOG_DEBUG ("Received content object: " << boost::cref(*data));
 
   // Getting Hop count 
@@ -235,28 +234,28 @@ ModConsumer::OnData(shared_ptr<const Data> data)
   // The below code will be very important in calculating RTT
 
   // If there exists an entry for last delay then update it
-  // SeqTimeoutsContainer::iterator entry = m_seqLastDelay.find(seq);
-  // if (entry != m_seqLastDelay.end()) {  // existence check
-  //   m_lastRetransmittedInterestDataDelay(this, seq, Simulator::Now() - entry->time, hopCount);
-  //   NS_LOG_DEBUG ("Updating last packet delay, seq: " << seq << " time: " << Simulator::Now() - entry->time);
+  SeqTimeoutsContainer::iterator entry = m_seqLastDelay.find(seq);
+  if (entry != m_seqLastDelay.end()) {  // existence check
+    m_lastRetransmittedInterestDataDelay(this, seq, Simulator::Now() - entry->time, hopCount);
+    NS_LOG_DEBUG ("Updating last packet delay, seq: " << seq << " time: " << Simulator::Now() - entry->time);
 
-  // }
+  }
 
   // If there exists an entry for full delay then update it
-  // entry = m_seqFullDelay.find(seq);
-  // if (entry != m_seqFullDelay.end()) {
-  //   m_firstInterestDataDelay(this, seq, Simulator::Now() - entry->time, m_seqRetxCounts[seq], hopCount);
-  //   NS_LOG_DEBUG ("Updating full packet delay, seq: " << seq << " time: " << Simulator::Now() - entry->time);
-  // }
+  entry = m_seqFullDelay.find(seq);
+  if (entry != m_seqFullDelay.end()) {
+    m_firstInterestDataDelay(this, seq, Simulator::Now() - entry->time, m_seqRetxCounts[seq], hopCount);
+    NS_LOG_DEBUG ("Updating full packet delay, seq: " << seq << " time: " << Simulator::Now() - entry->time);
+  }
 
-  // m_seqRetxCounts.erase(seq);
-  // m_seqFullDelay.erase(seq);
-  // m_seqLastDelay.erase(seq);
+  m_seqRetxCounts.erase(seq);
+  m_seqFullDelay.erase(seq);
+  m_seqLastDelay.erase(seq);
 
-  // m_seqTimeouts.erase(seq);
-  // m_retxSeqs.erase(seq);
+  m_seqTimeouts.erase(seq);
+  m_retxSeqs.erase(seq);
 
-  // m_rtt->AckSeq(SequenceNumber32(seq));
+  m_rtt->AckSeq(SequenceNumber32(seq));
 }
 
 void

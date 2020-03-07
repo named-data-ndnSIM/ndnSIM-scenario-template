@@ -27,7 +27,7 @@ int main (int argc, char *argv[])
   std::string traceFile;
   int nodeNum;
   double duration;
-  double interval = 30; // frequency between requests in seconds
+  double interval = 1; // frequency between requests in seconds
   double range = 400;
   bool verbose = false;
   bool network = true;
@@ -108,7 +108,7 @@ int main (int argc, char *argv[])
     ndnHelper.InstallAll();
 
     // Set BestRoute strategy
-    ndn::StrategyChoiceHelper::InstallAll("/", "/localhost/nfd/strategy/best-route");
+    ndn::StrategyChoiceHelper::InstallAll("/", "/localhost/nfd/strategy/`");
 
     // Simulating requests for CAM packets
     ndn::AppHelper consumerHelper("ModConsumerCbr");
@@ -121,11 +121,11 @@ int main (int argc, char *argv[])
     consumerHelper.Install(consumerNodes);
 
     // The producer should be satisfying requests for CAM packets
-    ndn::AppHelper producerHelper("ns3::ndn::ProactiveProducer");
+    ndn::AppHelper producerHelper("ns3::ndn::Producer");
     producerHelper.SetPrefix("/test/cam");
     producerHelper.SetAttribute("PayloadSize", StringValue("600"));
     producerHelper.SetAttribute("Freshness", TimeValue (Seconds(1.0)));
-    producerHelper.SetAttribute("Frequency", DoubleValue(1));
+    // producerHelper.SetAttribute("Frequency", DoubleValue(1));
     producerHelper.Install(producerNodes);
   }
 

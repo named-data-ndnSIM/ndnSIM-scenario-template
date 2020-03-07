@@ -128,11 +128,12 @@ ProactiveProducer::SendData(Name dataName)
 
   data->setSignature(signature);
 
-  NS_LOG_INFO("node(" << GetNode()->GetId() << ") responding with Data: " << data->getName());
+  NS_LOG_INFO("node(" << GetNode()->GetId() << ") broadcasting Data: " << data->getName());
 
   // to create real wire encoding
   data->wireEncode();
 
+  // Seems to be some app level tracing going on here
   m_transmittedDatas(data, this, m_face);
   m_appLink->onReceiveData(*data); 
 
