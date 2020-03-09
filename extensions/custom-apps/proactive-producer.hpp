@@ -13,11 +13,12 @@ namespace ndn {
 
 /**
  * @ingroup ndn-apps
- * @brief A simple Interest-sink applia simple Interest-sink application
+ * @brief A simple Interest-sink application that also actively pushes data at set frequency
  *
- * A simple Interest-sink application,
+ * A simple Interest-sink application that also actively pushes data at set frequency,
  * replying to every incoming Interest with a Data packet with a specified
- * size and name, same as the name of the Interest
+ * size and name, same as the name of the Interest.
+ * Pushing data out with a specific name and size
  */
 class ProactiveProducer : public App {
 public:
@@ -38,7 +39,7 @@ protected:
   virtual void
   StopApplication(); // Called at time specified by Stop
 
-  // class specific function
+  // class specific functions
   virtual void
   SendData(Name dataName);
 
@@ -53,7 +54,6 @@ private:
   Time m_freshness;
   double m_frequency;
   bool m_firstTime;
-
 
   uint32_t m_signature;
   Name m_keyLocator;

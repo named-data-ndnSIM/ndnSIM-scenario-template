@@ -119,11 +119,11 @@ int main (int argc, char *argv[])
     consumerHelper.Install(consumerNodes);
 
     // The producer should be satisfying requests for CAM packets
-    ndn::AppHelper producerHelper("ns3::ndn::Producer");
+    ndn::AppHelper producerHelper("ns3::ndn::ProactiveProducer");
     producerHelper.SetPrefix("/test/cam");
     producerHelper.SetAttribute("PayloadSize", StringValue("600"));
     producerHelper.SetAttribute("Freshness", TimeValue (Seconds(1.0)));
-    // producerHelper.SetAttribute("Frequency", DoubleValue(1));
+    producerHelper.SetAttribute("Frequency", DoubleValue(1));
     producerHelper.Install(producerNodes);
   }
 

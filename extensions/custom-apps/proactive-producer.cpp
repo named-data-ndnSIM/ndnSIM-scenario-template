@@ -26,39 +26,29 @@ ProactiveProducer::GetTypeId(void)
       .SetGroupName("Ndn")
       .SetParent<App>()
       .AddConstructor<ProactiveProducer>()
-
-      .AddAttribute("Prefix", "Prefix, for which Proactive Producer has the data", StringValue("/"),
+      .AddAttribute("Prefix", "Prefix, for which proactive producer has the data", StringValue("/"),
                     MakeNameAccessor(&ProactiveProducer::m_prefix), MakeNameChecker())
-
       .AddAttribute(
          "Postfix",
          "Postfix that is added to the output data (e.g., for adding producer-uniqueness)",
          StringValue("/"), MakeNameAccessor(&ProactiveProducer::m_postfix), MakeNameChecker())
-
       .AddAttribute("PayloadSize", "Virtual payload size for Content packets", UintegerValue(1024),
                     MakeUintegerAccessor(&ProactiveProducer::m_virtualPayloadSize),
                     MakeUintegerChecker<uint32_t>())
-
       .AddAttribute("Freshness", "Freshness of data packets, if 0, then unlimited freshness",
                     TimeValue(Seconds(0)), MakeTimeAccessor(&ProactiveProducer::m_freshness),
                     MakeTimeChecker())
-
-      .AddAttribute("Frequency", "Frequency of data packet broadcasts", StringValue("1.0"),
+      .AddAttribute("Frequency", "Frequency of data packets", StringValue("1.0"),
                     MakeDoubleAccessor(&ProactiveProducer::m_frequency), MakeDoubleChecker<double>())
-
-      .AddAttribute(
-         "Signature",
-         "Fake signature, 0 valid signature (default), other values application-specific",
+      .AddAttribute("Signature", "Fake signature, 0 valid signature (default), other values application-specific",
          UintegerValue(0), MakeUintegerAccessor(&ProactiveProducer::m_signature),
          MakeUintegerChecker<uint32_t>())
-
       .AddAttribute("KeyLocator",
                     "Name to be used for key locator.  If root, then key locator is not used",
                     NameValue(), MakeNameAccessor(&ProactiveProducer::m_keyLocator), MakeNameChecker());
   return tid;
 }
 
-// The code after the colon is member variable initialization...
 ProactiveProducer::ProactiveProducer()
   : m_frequency(1.0)
   , m_firstTime(true)
@@ -113,7 +103,7 @@ ProactiveProducer::SendData(Name dataName)
   auto data = make_shared<Data>();
   data->setName(dataName);
   data->setFreshnessPeriod(::ndn::time::milliseconds(m_freshness.GetMilliSeconds()));
-
+  data->setPushed(true);
   data->setContent(make_shared< ::ndn::Buffer>(m_virtualPayloadSize));
 
   Signature signature;
@@ -128,7 +118,7 @@ ProactiveProducer::SendData(Name dataName)
 
   data->setSignature(signature);
 
-  NS_LOG_INFO("node(" << GetNode()->GetId() << ") broadcasting Data: " << data->getName());
+  NS_LOG_INFO("node(" << GetNode()->GetId() << ") pushing Data=" << data->getName() << " face=" << m_face->getId());
 
   // to create real wire encoding
   data->wireEncode();
