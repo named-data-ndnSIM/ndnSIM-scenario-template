@@ -14,6 +14,7 @@
 
 // NDN packages
 #include "ns3/ndnSIM-module.h"
+#include "helper/ndn-fib-helper.hpp"
 
 using namespace std;
 namespace ns3 {
@@ -27,7 +28,7 @@ int main (int argc, char *argv[])
   std::string traceFile;
   int nodeNum;
   double duration;
-  double interval = 1; // frequency between requests in seconds
+  double interval = 100; // frequency between requests in seconds
   double range = 400;
   bool verbose = false;
   bool network = true;
@@ -81,13 +82,12 @@ int main (int argc, char *argv[])
 
     // The below set of helpers put together the required Wi-Fi Network Interface Controllers (NICs)
     YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
-    wifiChannel.AddPropagationLoss("ns3::RangePropagationLossModel");
 
     YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default ();
     wifiPhy.SetPcapDataLinkType (WifiPhyHelper::DLT_IEEE802_11);
     wifiPhy.SetChannel (wifiChannel.Create());
 
-    NqosWaveMacHelper wifi80211pMac = NqosWaveMacHelper::Default (); // could this be affecting range?
+    NqosWaveMacHelper wifi80211pMac = NqosWaveMacHelper::Default ();
     Wifi80211pHelper wifi80211p = Wifi80211pHelper::Default ();
     
     if (verbose) {
@@ -96,15 +96,17 @@ int main (int argc, char *argv[])
 
     wifi80211p.SetRemoteStationManager ("ns3::ConstantRateWifiManager",
                                         "DataMode",StringValue (phyMode),
-                                        "ControlMode",StringValue (phyMode)); // Need to figure out exactly what this is doing
+                                        "ControlMode",StringValue (phyMode));
 
     NetDeviceContainer vehicularDevices = wifi80211p.Install(wifiPhy, wifi80211pMac, consumerNodes);
     NetDeviceContainer trafficLightDevices = wifi80211p.Install(wifiPhy, wifi80211pMac, producerNodes);
 
     ndn::StackHelper ndnHelper;
-    ndnHelper.SetDefaultRoutes(true);
     ndnHelper.SetOldContentStore("ns3::ndn::cs::Freshness::Lru","MaxSize", "1000");
-    ndnHelper.InstallAll();
+    ndnHelper.Install(consumerNodes);
+
+    ndnHelper.SetOldContentStore("ns3::ndn::cs::Nocache");
+    ndnHelper.Install(producerNodes);
 
     ndn::StrategyChoiceHelper::InstallAll("/", "/localhost/nfd/strategy/best-route");
 

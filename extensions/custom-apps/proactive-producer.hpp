@@ -41,7 +41,7 @@ protected:
 
   // class specific functions
   virtual void
-  SendData(Name dataName);
+  SendData(Name dataName, bool pushed);
 
   virtual void
   ScheduleNextPacket();
@@ -50,6 +50,7 @@ private:
   EventId m_sendEvent; ///< @brief EventId of pending "send packet" event
   Name m_prefix;
   Name m_postfix;
+  shared_ptr<Face> m_broadcastFace;
   uint32_t m_virtualPayloadSize;
   Time m_freshness;
   double m_frequency;

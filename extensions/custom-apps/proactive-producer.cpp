@@ -63,7 +63,18 @@ ProactiveProducer::StartApplication()
   NS_LOG_FUNCTION_NOARGS();
   App::StartApplication();
 
+  // route to the application
   FibHelper::AddRoute(GetNode(), m_prefix, m_face, 0);
+
+  // step 1: get net device of this node...
+  Ptr<NetDevice> device = GetNode()->GetDevice(0);
+
+  // step 2: get face from net device...
+  shared_ptr<Face> m_broadcastFace = GetNode()->GetObject<L3Protocol>()->getFaceByNetDevice(device);
+
+  // step 3: add route to FIB
+  FibHelper::AddRoute(GetNode(), m_prefix, m_broadcastFace, 0);
+
   ScheduleNextPacket();
 }
 
@@ -73,6 +84,8 @@ ProactiveProducer::StopApplication()
   NS_LOG_FUNCTION_NOARGS();
 
   Simulator::Cancel(m_sendEvent);
+
+  m_broadcastFace->close();
 
   App::StopApplication();
 }
@@ -87,11 +100,11 @@ ProactiveProducer::OnInterest(shared_ptr<const Interest> interest)
   if (!m_active)
     return;
 
-  ProactiveProducer::SendData(interest->getName());
+  ProactiveProducer::SendData(interest->getName(), false);
 }
 
 void
-ProactiveProducer::SendData(Name dataName)
+ProactiveProducer::SendData(Name dataName, bool pushed)
 {
   // dataName.append(m_postfix);
   // dataName.appendVersion();
@@ -103,8 +116,10 @@ ProactiveProducer::SendData(Name dataName)
   auto data = make_shared<Data>();
   data->setName(dataName);
   data->setFreshnessPeriod(::ndn::time::milliseconds(m_freshness.GetMilliSeconds()));
-  data->setPushed(true);
   data->setContent(make_shared< ::ndn::Buffer>(m_virtualPayloadSize));
+  if(pushed) {
+    data->setPushed(true);
+  }
 
   Signature signature;
   SignatureInfo signatureInfo(static_cast< ::ndn::tlv::SignatureTypeValue>(255));
@@ -118,7 +133,7 @@ ProactiveProducer::SendData(Name dataName)
 
   data->setSignature(signature);
 
-  NS_LOG_INFO("node(" << GetNode()->GetId() << ") pushing Data=" << data->getName() << " face=" << m_face->getId());
+  NS_LOG_DEBUG("node(" << GetNode()->GetId() << ") Data=" << data->getName() << " face=" << m_face->getId() << " pushed=" << pushed);
 
   // to create real wire encoding
   data->wireEncode();
@@ -135,10 +150,10 @@ ProactiveProducer::ScheduleNextPacket()
 {
   NS_LOG_DEBUG ("m_sendEvent: " << m_sendEvent.IsRunning());
   if (m_firstTime) {
-    m_sendEvent = Simulator::Schedule(Seconds(0.5), &ProactiveProducer::SendData, this, m_prefix);
+    m_sendEvent = Simulator::Schedule(Seconds(0.5), &ProactiveProducer::SendData, this, m_prefix, true);
     m_firstTime = false;
   } else if (!m_sendEvent.IsRunning()) {
-    m_sendEvent = Simulator::Schedule(Seconds(m_frequency), &ProactiveProducer::SendData, this, m_prefix);
+    m_sendEvent = Simulator::Schedule(Seconds(m_frequency), &ProactiveProducer::SendData, this, m_prefix, true);
   }
 }
 
