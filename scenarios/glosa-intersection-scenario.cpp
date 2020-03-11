@@ -28,7 +28,7 @@ int main (int argc, char *argv[])
   std::string traceFile;
   int nodeNum;
   double duration;
-  double interval = 100; // frequency between requests in seconds
+  double interval = 25; // frequency between requests in seconds
   double range = 400;
   bool verbose = false;
   bool network = true;
@@ -102,6 +102,7 @@ int main (int argc, char *argv[])
     NetDeviceContainer trafficLightDevices = wifi80211p.Install(wifiPhy, wifi80211pMac, producerNodes);
 
     ndn::StackHelper ndnHelper;
+    ndnHelper.SetDefaultRoutes(true);
     ndnHelper.SetOldContentStore("ns3::ndn::cs::Freshness::Lru","MaxSize", "1000");
     ndnHelper.Install(consumerNodes);
 
@@ -110,12 +111,12 @@ int main (int argc, char *argv[])
 
     ndn::StrategyChoiceHelper::InstallAll("/", "/localhost/nfd/strategy/best-route");
 
-    // Simulating requests for CAM packets
     ndn::AppHelper consumerHelper("ModConsumerCbr");
     consumerHelper.SetPrefix("/test/dummy");
     consumerHelper.SetAttribute("Frequency", DoubleValue(interval));
     consumerHelper.Install(consumerNodes);
 
+    // Simulating requests for CAM packets
     consumerHelper.SetPrefix("/test/cam");
     consumerHelper.SetAttribute("Frequency", DoubleValue(interval));
     consumerHelper.Install(consumerNodes);
@@ -127,6 +128,11 @@ int main (int argc, char *argv[])
     producerHelper.SetAttribute("Freshness", TimeValue (Seconds(1.0)));
     producerHelper.SetAttribute("Frequency", DoubleValue(1));
     producerHelper.Install(producerNodes);
+
+    // ndn::GlobalRoutingHelper ndnGlobalRoutingHelper;
+    // ndnGlobalRoutingHelper.InstallAll();
+    // ndnGlobalRoutingHelper.AddOrigins("/test/cam", producerNodes.Get(0));
+    // ndnGlobalRoutingHelper.CalculateRoutes();
   }
 
   Simulator::Stop (Seconds (100.0));

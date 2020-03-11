@@ -12,6 +12,7 @@
 
 #include "utils/ndn-ns3-packet-tag.hpp"
 #include "utils/ndn-rtt-mean-deviation.hpp"
+#include "helper/ndn-fib-helper.hpp"
 
 #include <ndn-cxx/lp/tags.hpp>
 
@@ -147,49 +148,52 @@ ModConsumer::SendPacket()
   NS_LOG_FUNCTION_NOARGS();
 
   // Will be an invalid packet
-  uint32_t seq = std::numeric_limits<uint32_t>::max(); // invalid
+  // uint32_t seq = std::numeric_limits<uint32_t>::max(); // the invalid seq number
 
-  /*
-    if the integer is positice the loop runs infinitely --> poor code
-    - when the size of the list goes to 0 it will exit and therefore seq will be max int
-    - the consumer seems to work based off of packets to be retransmitted.
-    - removes the first entry in list of packets to be retransmitted
-    - removes packet from list of retransmissions
-    - then transmits that?
-  */
-  while (m_retxSeqs.size()) {
-    seq = *m_retxSeqs.begin();
-    m_retxSeqs.erase(m_retxSeqs.begin());
-    break;
-  }
+  // while (m_retxSeqs.size()) {
+  //   seq = *m_retxSeqs.begin();
+  //   m_retxSeqs.erase(m_retxSeqs.begin());
+  //   break;
+  // }
   
-  // will check fail conditions or increment sequence
-  if (seq == std::numeric_limits<uint32_t>::max()) {
-    if (m_seqMax != std::numeric_limits<uint32_t>::max()) {
-      if (m_seq >= m_seqMax) {
-        NS_LOG_DEBUG ("maximum sequence number has been requested, m_seq: " << m_seq << " m_seqMax: " << m_seqMax);
-        return; // we are totally done
-      }
-    }
+  // // will check fail conditions or increment sequence
+  // if (seq == std::numeric_limits<uint32_t>::max()) {
+  //   if (m_seqMax != std::numeric_limits<uint32_t>::max()) {
+  //     if (m_seq >= m_seqMax) {
+  //       NS_LOG_DEBUG ("maximum sequence number has been requested, m_seq: " << m_seq << " m_seqMax: " << m_seqMax);
+  //       return; // we are totally done
+  //     }
+  //   }
 
-    seq = m_seq++;
-  }
+  //   seq = m_seq++;
+  // }
 
-  shared_ptr<Name> nameWithSequence = make_shared<Name>(m_interestName);
-  nameWithSequence->appendSequenceNumber(seq);
+  // shared_ptr<Name> nameWithSequence = make_shared<Name>(m_interestName);
+  // nameWithSequence->appendSequenceNumber(seq);
 
+  // shared_ptr<Interest> interest = make_shared<Interest>();
+  // interest->setNonce(m_rand->GetValue(0, std::numeric_limits<uint32_t>::max()));
+  // interest->setName(*nameWithSequence);
+  // interest->setCanBePrefix(false);
+  // time::milliseconds interestLifeTime(m_interestLifeTime.GetMilliSeconds());
+  // interest->setInterestLifetime(interestLifeTime);
+  // interest->setMustBeFresh(true);
+
+  // implementation without sequence number
+  shared_ptr<Name> name = make_shared<Name>(m_interestName);
   shared_ptr<Interest> interest = make_shared<Interest>();
+  interest->setName(*name);
   interest->setNonce(m_rand->GetValue(0, std::numeric_limits<uint32_t>::max()));
-  interest->setName(*nameWithSequence);
   interest->setCanBePrefix(false);
   time::milliseconds interestLifeTime(m_interestLifeTime.GetMilliSeconds());
   interest->setInterestLifetime(interestLifeTime);
   interest->setMustBeFresh(true);
 
   NS_LOG_DEBUG ("Requesting Interest: \n" << *interest);
-  NS_LOG_INFO("> Interest for " << seq);
+  // NS_LOG_INFO("> Interest for " << seq);
 
-  WillSendOutInterest(seq);
+  // WillSendOutInterest(seq);
+  WillSendOutInterest(interest->GetNonce());
 
   m_transmittedInterests(interest, this, m_face);
   m_appLink->onReceiveInterest(*interest);
