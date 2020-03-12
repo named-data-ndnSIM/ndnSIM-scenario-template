@@ -136,6 +136,7 @@ int main (int argc, char *argv[])
     consumerHelper.SetPrefix("/test/cam");
     consumerHelper.SetAttribute("Frequency", DoubleValue(consumerInterval));
     consumerHelper.SetAttribute("LifeTime", TimeValue(Seconds(consumerInterval)));
+    consumerHelper.SetAttribute("Randomize", StringValue("uniform"));
     consumerHelper.Install(consumerNodes);
 
     // The producer should be satisfying requests for CAM packets
