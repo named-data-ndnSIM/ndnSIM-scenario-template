@@ -61,27 +61,27 @@ int main (int argc, char *argv[])
   }
 
   // Create consumer and producer nodes
-  // NodeContainer consumerNodes;
-  // consumerNodes.Create(nodeNum);
-  // NodeContainer producerNodes;
-  // producerNodes.Create(1);
-
   NodeContainer consumerNodes;
-  // consumerNodes.Create(nodeNum);
-  consumerNodes.Create(1);
+  consumerNodes.Create(nodeNum);
   NodeContainer producerNodes;
   producerNodes.Create(1);
+
+  // NodeContainer consumerNodes;
+  // // consumerNodes.Create(nodeNum);
+  // consumerNodes.Create(1);
+  // NodeContainer producerNodes;
+  // producerNodes.Create(1);
   
   // Mobility for vehicles comes from traceFile
-  // Ns2MobilityHelper ns2 = Ns2MobilityHelper (traceFile);
-  // ns2.Install ();
+  Ns2MobilityHelper ns2 = Ns2MobilityHelper (traceFile);
+  ns2.Install ();
 
-  MobilityHelper testNodeMobility;
-  Ptr<ListPositionAllocator> testPosAlloc = CreateObject<ListPositionAllocator> ();
-  testPosAlloc->Add(Vector (510.0, 405.0, 0.0));
-  testNodeMobility.SetPositionAllocator (testPosAlloc);
-  testNodeMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
-  testNodeMobility.Install(consumerNodes);
+  // MobilityHelper testNodeMobility;
+  // Ptr<ListPositionAllocator> testPosAlloc = CreateObject<ListPositionAllocator> ();
+  // testPosAlloc->Add(Vector (510.0, 405.0, 0.0));
+  // testNodeMobility.SetPositionAllocator (testPosAlloc);
+  // testNodeMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+  // testNodeMobility.Install(consumerNodes);
 
   // Mobility of traffic light is a fixed position ~intersection of nodes
   MobilityHelper trafficLightMobility;

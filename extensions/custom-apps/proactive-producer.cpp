@@ -100,8 +100,7 @@ ProactiveProducer::OnInterest(shared_ptr<const Interest> interest)
   if (!m_active)
     return;
 
-  return;
-  // ProactiveProducer::SendData(interest->getName(), false);
+  ProactiveProducer::SendData(interest->getName(), false);
 }
 
 void

@@ -122,6 +122,7 @@ ModConsumer::OnData(shared_ptr<const Data> data)
 
   App::OnData(data);
 
+  // getting the time that the data was created
   NS_LOG_FUNCTION(this << data);
   NS_LOG_DEBUG ("Received content object: " << boost::cref(*data));
 
@@ -137,7 +138,7 @@ ModConsumer::OnData(shared_ptr<const Data> data)
   // Are we looking for data
   if (m_waitingForData) {
     m_lastRetransmittedInterestDataDelay(this, 1, Simulator::Now() - m_lastInterestSentTime, hopCount);
-    NS_LOG_DEBUG ("logging last packet delay, time: " << (Simulator::Now() - m_lastInterestSentTime));
+    NS_LOG_DEBUG ("logging last packet delay, delay=" << (Simulator::Now() - m_lastInterestSentTime));
   }
 
   // timer resets
