@@ -27,9 +27,10 @@ int main (int argc, char *argv[])
   std::string phyMode ("OfdmRate6MbpsBW10MHz");
   std::string traceFile;
   int nodeNum;
-  double duration;
-  double interval = 25; // frequency between requests in seconds
-  double range = 400;
+  double simulationDuration;
+  double consumerInterval = 1; // frequency between consumer interests generation
+  double producerInterval = 1; // frequency between producer data pushes
+  double range = 400; // desired transmission range for the signal
   bool verbose = false;
   bool network = true;
 
@@ -37,14 +38,14 @@ int main (int argc, char *argv[])
   CommandLine cmd;
   cmd.AddValue ("traceFile", "Ns2 movement trace file", traceFile);
   cmd.AddValue ("nodeNum", "Number of nodes", nodeNum);
-  cmd.AddValue ("duration", "Duration of Simulation", duration);
+  cmd.AddValue ("duration", "Duration of Simulation", simulationDuration);
   cmd.AddValue ("verbose", "turn on all WifiNetDevice log components", verbose);
   cmd.AddValue ("network", "install the ndn stack on all nodes", network);
   cmd.AddValue ("range", "The maximm range for transmission", range);
   cmd.Parse (argc,argv);
 
   // Check command line arguments
-  if (traceFile.empty () || nodeNum <= 0 || duration <= 0)
+  if (traceFile.empty () || nodeNum <= 0 || simulationDuration <= 0)
   {
     std::cout << "Make sure to pass all required arguments traceFile, nodeNum, duration and logFile";
     return 0;
@@ -60,14 +61,27 @@ int main (int argc, char *argv[])
   }
 
   // Create consumer and producer nodes
+  // NodeContainer consumerNodes;
+  // consumerNodes.Create(nodeNum);
+  // NodeContainer producerNodes;
+  // producerNodes.Create(1);
+
   NodeContainer consumerNodes;
-  consumerNodes.Create(nodeNum);
+  // consumerNodes.Create(nodeNum);
+  consumerNodes.Create(1);
   NodeContainer producerNodes;
   producerNodes.Create(1);
-
+  
   // Mobility for vehicles comes from traceFile
-  Ns2MobilityHelper ns2 = Ns2MobilityHelper (traceFile);
-  ns2.Install ();
+  // Ns2MobilityHelper ns2 = Ns2MobilityHelper (traceFile);
+  // ns2.Install ();
+
+  MobilityHelper testNodeMobility;
+  Ptr<ListPositionAllocator> testPosAlloc = CreateObject<ListPositionAllocator> ();
+  testPosAlloc->Add(Vector (510.0, 405.0, 0.0));
+  testNodeMobility.SetPositionAllocator (testPosAlloc);
+  testNodeMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+  testNodeMobility.Install(consumerNodes);
 
   // Mobility of traffic light is a fixed position ~intersection of nodes
   MobilityHelper trafficLightMobility;
@@ -109,30 +123,28 @@ int main (int argc, char *argv[])
     ndnHelper.SetOldContentStore("ns3::ndn::cs::Nocache");
     ndnHelper.Install(producerNodes);
 
-    ndn::StrategyChoiceHelper::InstallAll("/", "/localhost/nfd/strategy/best-route");
+    // ndn::StrategyChoiceHelper::InstallAll("/", "/localhost/nfd/strategy/best-route");
 
     ndn::AppHelper consumerHelper("ModConsumerCbr");
+
+    // This is a hack to get the simulation to run properly. Otherwise interests never satisfy from cache -> NDN Bug
     consumerHelper.SetPrefix("/test/dummy");
-    consumerHelper.SetAttribute("Frequency", DoubleValue(interval));
+    consumerHelper.SetAttribute("Frequency", DoubleValue(101));
     consumerHelper.Install(consumerNodes);
 
     // Simulating requests for CAM packets
     consumerHelper.SetPrefix("/test/cam");
-    consumerHelper.SetAttribute("Frequency", DoubleValue(interval));
+    consumerHelper.SetAttribute("Frequency", DoubleValue(consumerInterval));
+    consumerHelper.SetAttribute("LifeTime", TimeValue(Seconds(consumerInterval)));
     consumerHelper.Install(consumerNodes);
 
     // The producer should be satisfying requests for CAM packets
     ndn::AppHelper producerHelper("ns3::ndn::ProactiveProducer");
     producerHelper.SetPrefix("/test/cam");
     producerHelper.SetAttribute("PayloadSize", StringValue("600"));
-    producerHelper.SetAttribute("Freshness", TimeValue (Seconds(1.0)));
-    producerHelper.SetAttribute("Frequency", DoubleValue(1));
+    producerHelper.SetAttribute("Freshness", TimeValue (Seconds(producerInterval)));
+    producerHelper.SetAttribute("Frequency", DoubleValue(producerInterval));
     producerHelper.Install(producerNodes);
-
-    // ndn::GlobalRoutingHelper ndnGlobalRoutingHelper;
-    // ndnGlobalRoutingHelper.InstallAll();
-    // ndnGlobalRoutingHelper.AddOrigins("/test/cam", producerNodes.Get(0));
-    // ndnGlobalRoutingHelper.CalculateRoutes();
   }
 
   Simulator::Stop (Seconds (100.0));

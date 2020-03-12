@@ -100,7 +100,8 @@ ProactiveProducer::OnInterest(shared_ptr<const Interest> interest)
   if (!m_active)
     return;
 
-  ProactiveProducer::SendData(interest->getName(), false);
+  return;
+  // ProactiveProducer::SendData(interest->getName(), false);
 }
 
 void
@@ -133,7 +134,7 @@ ProactiveProducer::SendData(Name dataName, bool pushed)
 
   data->setSignature(signature);
 
-  NS_LOG_DEBUG("node(" << GetNode()->GetId() << ") Data=" << data->getName() << " face=" << m_face->getId() << " pushed=" << pushed);
+  NS_LOG_DEBUG("Data=" << data->getName() << " face=" << m_face->getId() << " pushed=" << pushed);
 
   // to create real wire encoding
   data->wireEncode();

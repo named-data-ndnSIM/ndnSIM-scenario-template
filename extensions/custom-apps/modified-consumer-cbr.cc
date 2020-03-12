@@ -47,10 +47,6 @@ ModConsumerCbr::GetTypeId(void)
 
       .AddAttribute("Frequency", "Frequency of interest packets", StringValue("1.0"),
                     MakeDoubleAccessor(&ModConsumerCbr::m_frequency), MakeDoubleChecker<double>())
-
-      .AddAttribute("MaxSeq", "Maximum sequence number to request",
-                    IntegerValue(std::numeric_limits<uint32_t>::max()),
-                    MakeIntegerAccessor(&ModConsumerCbr::m_seqMax), MakeIntegerChecker<uint32_t>())
     ;
 
   return tid;
@@ -61,8 +57,6 @@ ModConsumerCbr::ModConsumerCbr()
   , m_firstTime(true)
 {
   NS_LOG_FUNCTION_NOARGS();
-  m_seqMax = std::numeric_limits<uint32_t>::max();
-
 }
 
 // this is a destructor
@@ -75,7 +69,7 @@ ModConsumerCbr::ScheduleNextPacket()
 {
   NS_LOG_DEBUG ("m_sendEvent: " << m_sendEvent.IsRunning());
   if (m_firstTime) {
-    m_sendEvent = Simulator::Schedule(Seconds(0.0), &ModConsumer::SendPacket, this);
+    m_sendEvent = Simulator::Schedule(Seconds(0), &ModConsumer::SendPacket, this);
     m_firstTime = false;
   } else if (!m_sendEvent.IsRunning()) {
     m_sendEvent = Simulator::Schedule(Seconds(m_frequency), &ModConsumer::SendPacket, this);
