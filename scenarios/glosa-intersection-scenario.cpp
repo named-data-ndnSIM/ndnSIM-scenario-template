@@ -66,8 +66,8 @@ int main (int argc, char *argv[])
   NodeContainer producerNodes;
   producerNodes.Create(1);
 
+  // Nodes for testing purposes
   // NodeContainer consumerNodes;
-  // // consumerNodes.Create(nodeNum);
   // consumerNodes.Create(1);
   // NodeContainer producerNodes;
   // producerNodes.Create(1);
@@ -76,9 +76,10 @@ int main (int argc, char *argv[])
   Ns2MobilityHelper ns2 = Ns2MobilityHelper (traceFile);
   ns2.Install ();
 
+  // Good for testing
   // MobilityHelper testNodeMobility;
   // Ptr<ListPositionAllocator> testPosAlloc = CreateObject<ListPositionAllocator> ();
-  // testPosAlloc->Add(Vector (510.0, 405.0, 0.0));
+  // testPosAlloc->Add(Vector (800.0, 405.0, 0.0));
   // testNodeMobility.SetPositionAllocator (testPosAlloc);
   // testNodeMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   // testNodeMobility.Install(consumerNodes);
@@ -92,14 +93,14 @@ int main (int argc, char *argv[])
   trafficLightMobility.Install(producerNodes);
 
   if (network) {
-    Config::SetDefault ("ns3::RangePropagationLossModel::MaxRange", DoubleValue (range));
-
     // The below set of helpers put together the required Wi-Fi Network Interface Controllers (NICs)
-    YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
+    YansWifiChannelHelper wifiChannel;
+    wifiChannel.SetPropagationDelay("ns3::ConstantSpeedPropagationDelayModel");
+    wifiChannel.AddPropagationLoss("ns3::LogDistancePropagationLossModel", "Exponent", DoubleValue(2.55));  // 100m=3.0, 200m=2.72 300m=2.55
 
     YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default ();
     wifiPhy.SetPcapDataLinkType (WifiPhyHelper::DLT_IEEE802_11);
-    wifiPhy.SetChannel (wifiChannel.Create());
+    wifiPhy.SetChannel (wifiChannel.Create ());
 
     NqosWaveMacHelper wifi80211pMac = NqosWaveMacHelper::Default ();
     Wifi80211pHelper wifi80211p = Wifi80211pHelper::Default ();
