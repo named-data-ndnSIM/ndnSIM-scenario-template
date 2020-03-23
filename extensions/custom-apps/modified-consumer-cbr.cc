@@ -48,9 +48,10 @@ ModConsumerCbr::GetTypeId(void)
       .AddAttribute("Frequency", "Frequency of interest packets", StringValue("1.0"),
                     MakeDoubleAccessor(&ModConsumerCbr::m_frequency), MakeDoubleChecker<double>())
 
-      .AddAttribute("MaxSeq", "Maximum sequence number to request",
-                    IntegerValue(std::numeric_limits<uint32_t>::max()),
-                    MakeIntegerAccessor(&ModConsumerCbr::m_seqMax), MakeIntegerChecker<uint32_t>())
+      .AddAttribute("Randomize", "Type of send time randomization: none (default), uniform, exponential",
+                    StringValue("none"),
+                    MakeStringAccessor(&ModConsumerCbr::SetRandomize, &ModConsumerCbr::GetRandomize),
+                    MakeStringChecker())
     ;
 
   return tid;
@@ -61,10 +62,9 @@ ModConsumerCbr::ModConsumerCbr()
   , m_firstTime(true)
 {
   NS_LOG_FUNCTION_NOARGS();
-  m_seqMax = std::numeric_limits<uint32_t>::max();
-
 }
 
+// this is a destructor
 ModConsumerCbr::~ModConsumerCbr()
 {
 }
@@ -74,11 +74,38 @@ ModConsumerCbr::ScheduleNextPacket()
 {
   NS_LOG_DEBUG ("m_sendEvent: " << m_sendEvent.IsRunning());
   if (m_firstTime) {
-    m_sendEvent = Simulator::Schedule(Seconds(0.0), &ModConsumer::SendPacket, this);
+    m_sendEvent = Simulator::Schedule((m_random == 0) ? Seconds(0)
+                                                      : Seconds(m_random->GetValue()),
+                                      &ModConsumer::SendPacket, this);
     m_firstTime = false;
   } else if (!m_sendEvent.IsRunning()) {
-    m_sendEvent = Simulator::Schedule(Seconds(1.0 / m_frequency), &ModConsumer::SendPacket, this);
+    m_sendEvent = Simulator::Schedule(Seconds(m_frequency), &ModConsumer::SendPacket, this);
   }
+}
+
+void
+ModConsumerCbr::SetRandomize(const std::string& value)
+{
+  if (value == "uniform") {
+    m_random = CreateObject<UniformRandomVariable>();
+    m_random->SetAttribute("Min", DoubleValue(0.0));
+    m_random->SetAttribute("Max", DoubleValue(2 * 1.0 / m_frequency));
+  }
+  else if (value == "exponential") {
+    m_random = CreateObject<ExponentialRandomVariable>();
+    m_random->SetAttribute("Mean", DoubleValue(1.0 / m_frequency));
+    m_random->SetAttribute("Bound", DoubleValue(50 * 1.0 / m_frequency));
+  }
+  else
+    m_random = 0;
+
+  m_randomType = value;
+}
+
+std::string
+ModConsumerCbr::GetRandomize() const
+{
+  return m_randomType;
 }
 
 } // namespace ndn
