@@ -46,7 +46,7 @@ protected:
   GetRandomize() const;
 
 protected:
-  double m_frequency; // Frequency of interest packets (in hertz)
+  double m_frequency; // Frequency of interest packets
   bool m_firstTime;
   Ptr<RandomVariableStream> m_random;
   std::string m_randomType;

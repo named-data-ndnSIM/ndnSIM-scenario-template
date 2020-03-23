@@ -95,7 +95,7 @@ ModConsumer::SendPacket()
   interest->setCanBePrefix(false);
   time::milliseconds interestLifeTime(m_interestLifeTime.GetMilliSeconds());
   interest->setInterestLifetime(interestLifeTime);
-  interest->setMustBeFresh(true);
+  //interest->setMustBeFresh(true);
 
   NS_LOG_DEBUG ("Requesting Interest: \n" << *interest);
 
@@ -134,6 +134,7 @@ ModConsumer::OnData(shared_ptr<const Data> data)
     NS_LOG_DEBUG("Packet coming from local cache"); // not sure this is true
   }
   NS_LOG_DEBUG("Hop count: " << hopCount);
+  NS_LOG_DEBUG("Freshness Period: " << data->getFreshnessPeriod());
 
   // Are we looking for data
   if (m_waitingForData) {

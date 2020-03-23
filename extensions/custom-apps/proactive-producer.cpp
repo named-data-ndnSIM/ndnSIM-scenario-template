@@ -28,21 +28,22 @@ ProactiveProducer::GetTypeId(void)
       .AddConstructor<ProactiveProducer>()
       .AddAttribute("Prefix", "Prefix, for which proactive producer has the data", StringValue("/"),
                     MakeNameAccessor(&ProactiveProducer::m_prefix), MakeNameChecker())
-      .AddAttribute(
-         "Postfix",
-         "Postfix that is added to the output data (e.g., for adding producer-uniqueness)",
-         StringValue("/"), MakeNameAccessor(&ProactiveProducer::m_postfix), MakeNameChecker())
+
       .AddAttribute("PayloadSize", "Virtual payload size for Content packets", UintegerValue(1024),
                     MakeUintegerAccessor(&ProactiveProducer::m_virtualPayloadSize),
                     MakeUintegerChecker<uint32_t>())
+
       .AddAttribute("Freshness", "Freshness of data packets, if 0, then unlimited freshness",
                     TimeValue(Seconds(0)), MakeTimeAccessor(&ProactiveProducer::m_freshness),
                     MakeTimeChecker())
-      .AddAttribute("Frequency", "Frequency of data packets", StringValue("1.0"),
+
+      .AddAttribute("Frequency", "Frequency for pushing of data packets", StringValue("1.0"),
                     MakeDoubleAccessor(&ProactiveProducer::m_frequency), MakeDoubleChecker<double>())
+
       .AddAttribute("Signature", "Fake signature, 0 valid signature (default), other values application-specific",
          UintegerValue(0), MakeUintegerAccessor(&ProactiveProducer::m_signature),
          MakeUintegerChecker<uint32_t>())
+
       .AddAttribute("KeyLocator",
                     "Name to be used for key locator.  If root, then key locator is not used",
                     NameValue(), MakeNameAccessor(&ProactiveProducer::m_keyLocator), MakeNameChecker());
@@ -72,7 +73,7 @@ ProactiveProducer::StartApplication()
   // step 2: get face from net device...
   shared_ptr<Face> m_broadcastFace = GetNode()->GetObject<L3Protocol>()->getFaceByNetDevice(device);
 
-  // step 3: add route to FIB
+  // step 3: add net device to push data out of to FIB
   FibHelper::AddRoute(GetNode(), m_prefix, m_broadcastFace, 0);
 
   ScheduleNextPacket();
@@ -106,8 +107,6 @@ ProactiveProducer::OnInterest(shared_ptr<const Interest> interest)
 void
 ProactiveProducer::SendData(Name dataName, bool pushed)
 {
-  // dataName.append(m_postfix);
-  // dataName.appendVersion();
   if (!m_active)
     return;
 
@@ -133,7 +132,7 @@ ProactiveProducer::SendData(Name dataName, bool pushed)
 
   data->setSignature(signature);
 
-  NS_LOG_DEBUG("Data=" << data->getName() << " face=" << m_face->getId() << " pushed=" << pushed);
+  NS_LOG_DEBUG("Data=" << data->getName() << " face=" << m_face->getId() << " pushed=" << data->getPushed());
 
   // to create real wire encoding
   data->wireEncode();
@@ -150,7 +149,7 @@ ProactiveProducer::ScheduleNextPacket()
 {
   NS_LOG_DEBUG ("m_sendEvent: " << m_sendEvent.IsRunning());
   if (m_firstTime) {
-    m_sendEvent = Simulator::Schedule(Seconds(0.5), &ProactiveProducer::SendData, this, m_prefix, true);
+    m_sendEvent = Simulator::Schedule(Seconds(0), &ProactiveProducer::SendData, this, m_prefix, true);
     m_firstTime = false;
   } else if (!m_sendEvent.IsRunning()) {
     m_sendEvent = Simulator::Schedule(Seconds(m_frequency), &ProactiveProducer::SendData, this, m_prefix, true);
