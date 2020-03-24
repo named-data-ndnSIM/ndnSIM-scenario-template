@@ -80,6 +80,12 @@ main(int argc, char* argv[])
   NodeContainer producerNodes;
   producerNodes.Create(1);
 
+  // testing configuration
+  // NodeContainer consumerNodes;
+  // consumerNodes.Create(1);
+  // NodeContainer producerNodes;
+  // producerNodes.Create(1);
+
   if (range == "200") {
     std::cout << range << "\n";
     range_d = 2.72;
@@ -94,6 +100,14 @@ main(int argc, char* argv[])
 
   // Mobility for vehicles comes from traceFile
   ns2Mobility.Install();
+
+  // testing configuration
+  // MobilityHelper testMobility;
+  // Ptr<ListPositionAllocator> testAlloc = CreateObject<ListPositionAllocator> ();
+  // testAlloc->Add(Vector (500.0, 415.0, 0.0));
+  // testMobility.SetPositionAllocator (testAlloc);
+  // testMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+  // testMobility.Install(consumerNodes);
 
   // Mobility for traffic light is a fixed position ~intersection of nodes
   MobilityHelper trafficLightMobility;
@@ -144,7 +158,7 @@ main(int argc, char* argv[])
 
   // Producer
   ndn::AppHelper producerHelper("ns3::ndn::ProactiveProducer");
-  producerHelper.SetAttribute("PayloadSize", StringValue("1024"));
+  producerHelper.SetAttribute("PayloadSize", StringValue("600"));
   producerHelper.SetAttribute("Freshness", TimeValue(Seconds(1.0))); // freshness 2 seconds (!!!
                                                                      // freshness granularity is 1
                                                                      // seconds !!!)
