@@ -54,6 +54,8 @@ RepeatingConsumer::RepeatingConsumer()
 void
 RepeatingConsumer::StartApplication()
 {
+  NS_LOG_FUNCTION_NOARGS();
+
   // initialize ndn::App
   ndn::App::StartApplication();
   SetRandomize();
@@ -64,6 +66,8 @@ RepeatingConsumer::StartApplication()
 void
 RepeatingConsumer::ScheduleNextPacket()
 {
+  NS_LOG_FUNCTION_NOARGS();
+
   // NS_LOG_DEBUG ("m_sendEvent: " << m_sendEvent.IsRunning());
   if (m_firstTime) {
     m_sendEvent = Simulator::Schedule(Seconds(m_random->GetValue()),
@@ -77,15 +81,19 @@ RepeatingConsumer::ScheduleNextPacket()
 void
 RepeatingConsumer::SetRandomize()
 {
-    m_random = CreateObject<UniformRandomVariable>();
-    m_random->SetAttribute("Min", DoubleValue(0.0));
-    m_random->SetAttribute("Max", DoubleValue(2 * 1.0 / m_frequency));
+  NS_LOG_FUNCTION_NOARGS();
+
+  m_random = CreateObject<UniformRandomVariable>();
+  m_random->SetAttribute("Min", DoubleValue(0.0));
+  m_random->SetAttribute("Max", DoubleValue(2 * 1.0 / m_frequency));
 }
 
 // Processing when application is stopped
 void
 RepeatingConsumer::StopApplication()
 {
+  NS_LOG_FUNCTION_NOARGS();
+
   m_isRunning = false;
   Simulator::Cancel(m_sendEvent);
   // cleanup ndn::App
@@ -95,6 +103,8 @@ RepeatingConsumer::StopApplication()
 void
 RepeatingConsumer::SendInterest()
 {
+  NS_LOG_FUNCTION_NOARGS();
+
   if (!m_isRunning)
     return;
 
@@ -117,7 +127,7 @@ RepeatingConsumer::SendInterest()
   // Call trace (for logging purposes)
   m_transmittedInterests(interest, this, m_face);
 
-  // NS_LOG_DEBUG(">> I: " << m_name);
+  NS_LOG_DEBUG(">> I: " << m_name);
 
   // Forward packet to lower (network) layer
   m_appLink->onReceiveInterest(*interest);
@@ -128,24 +138,28 @@ RepeatingConsumer::SendInterest()
 void
 RepeatingConsumer::OnData(std::shared_ptr<const ndn::Data> data)
 {
+  NS_LOG_FUNCTION_NOARGS();
+
   App::OnData(data);
-  // NS_LOG_DEBUG("<< D: " << data->getName() << " freshness=" << static_cast<ndn::time::milliseconds>(data->getFreshnessPeriod()) << " pushed=" << data->getPushed());
+  NS_LOG_DEBUG("<< D: " << data->getName() << " freshness=" << static_cast<ndn::time::milliseconds>(data->getFreshnessPeriod()) << " pushed=" << data->getPushed());
 
   int hopCount = 0;
   auto hopCountTag = data->getTag<ndn::lp::HopCountTag>();
   if (hopCountTag != nullptr) { // e.g., packet came from local node's cache
     hopCount = *hopCountTag;
   } else {
-    // NS_LOG_DEBUG("Packet coming from local cache"); // not sure this is true
+    NS_LOG_DEBUG("Packet coming from local cache"); // not sure this is true
   }
 
   m_lastRetransmittedInterestDataDelay(this, 1, Simulator::Now() - m_lastInterestSentTime, hopCount);
-  // NS_LOG_DEBUG ("logging last packet delay, delay=" << (Simulator::Now() - m_lastInterestSentTime));
+  NS_LOG_DEBUG ("logging last packet delay, delay=" << (Simulator::Now() - m_lastInterestSentTime));
 }
 
 void
 RepeatingConsumer::OnNack(std::shared_ptr<const ndn::lp::Nack> nack)
 {
+  NS_LOG_FUNCTION_NOARGS();
+
   // tracing inside
   App::OnNack(nack);
 

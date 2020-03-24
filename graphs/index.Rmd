@@ -1,14 +1,18 @@
 ---
 title: "Popular information dissemination in Vehicular Ad-Hoc networks - Results Exploration"
-author: Christopher Lynch
-output: 
-  html_document:
-    toc: true
-    toc_float: true
-    toc_collapsed: true
-    toc_depth: 3
-    number_sections: true
+author: "Christopher Lynch"
 theme: lumen
+always_allow_html: true
+output:
+  html_document:
+    number_sections: yes
+    toc: yes
+    toc_collapsed: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
 ---
 
 ```{r setup, include = FALSE, error = FALSE}
@@ -112,8 +116,9 @@ plot_delay_all_total2 <- function(dir) {
   ## Data processing
   data.delay.filtered <- data.delay[c("Time", "Type", "DelayS", "method")]
 
-  g.last.delay <- ggplot(data.delay.filtered) +
-    geom_line(aes (x=Time, y=DelayS, group=method, colour=method, shape=method), size=1) +
+  g.last.delay <- ggplot(data.delay.filtered, aes (x=Time, y=DelayS, group=method, colour=method, shape=method), size=1) +
+    geom_line() +
+    geom_point() +
     ggtitle(dir) +
     ylab("Delay (seconds)")
   
