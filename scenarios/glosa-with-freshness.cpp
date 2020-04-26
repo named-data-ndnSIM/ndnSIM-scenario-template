@@ -31,6 +31,7 @@ main(int argc, char* argv[])
   std::string range = "100"; // desired transmission range for the signal
   double range_d = 3.0;
   std::string payloadSize = "600";
+  double frequency = .1;
   int nodeNum;
 
   // Read optional command-line parameters (e.g., enable visualizer with ./waf --run=<> --visualize
@@ -140,9 +141,13 @@ main(int argc, char* argv[])
   // Install Ndn stack on all nodes
   ndn::StackHelper ndnHelper;
   ndnHelper.SetDefaultRoutes(true);
-  ndnHelper.setCsSize(2); // allow just 2 entries to be cached
-  ndnHelper.setPolicy("nfd::cs::lru");
+
+  // new cache
+  // ndnHelper.setCsSize(2); // allow just 2 entries to be cached
+  // ndnHelper.setPolicy("nfd::cs::lru");
+  ndnHelper.SetOldContentStore("ns3::ndn::cs::Freshness::Lru","MaxSize", "100"); // Old content store so that cache hit tracing can be used
   ndnHelper.Install(consumerNodes);
+
 
   ndnHelper.SetOldContentStore("ns3::ndn::cs::Nocache");
   ndnHelper.Install(producerNodes);
@@ -153,27 +158,42 @@ main(int argc, char* argv[])
   ndn::AppHelper consumerHelper("RepeatingConsumer");
 
   consumerHelper.SetPrefix("/cam");
-  consumerHelper.SetAttribute("Frequency", DoubleValue(1));
+  consumerHelper.SetAttribute("Frequency", DoubleValue(frequency));
   consumerHelper.Install(consumerNodes);
 
-  // Producer
-  ndn::AppHelper producerHelper("ns3::ndn::ProactiveProducer");
+  // ** normal producer **
+
+  ndn::AppHelper producerHelper("ns3::ndn::Producer");
   producerHelper.SetAttribute("PayloadSize", StringValue("600"));
-  producerHelper.SetAttribute("Freshness", TimeValue(Seconds(1.0))); // freshness 2 seconds (!!!
-                                                                     // freshness granularity is 1
-                                                                     // seconds !!!)
-  producerHelper.SetAttribute("Frequency", DoubleValue(1.0));
+  producerHelper.SetAttribute("Freshness", TimeValue(MilliSeconds(frequency*1000)));
   producerHelper.SetPrefix("/cam");
   producerHelper.Install(producerNodes);
+
+  // ** proactive producer **
+
+  // ndn::AppHelper producerHelper("ns3::ndn::ProactiveProducer");
+  // producerHelper.SetAttribute("PayloadSize", StringValue("600"));
+  // producerHelper.SetAttribute("Freshness", TimeValue(MilliSeconds(frequency*1000)));
+  // producerHelper.SetAttribute("Frequency", DoubleValue(frequency));
+  // producerHelper.SetPrefix("/cam");
+  // producerHelper.Install(producerNodes);
 
   Simulator::Stop(Seconds(100.0));
 
   std::ostringstream osss;
   osss << dir << "rate-trace.txt";
   std::string dirRate = osss.str();
+  std::cout << "dirRate: " << dirRate << "\n";
   ndn::L3RateTracer::InstallAll(dirRate, Seconds(1));
 
+  std::ostringstream csss;
+  csss << dir << "cs-trace.txt";
+  std::string dirCS = csss.str();
+  std::cout << "dirCS: " << dirCS << "\n";
+  ndn::CsTracer::InstallAll(dirCS, Seconds(1));
+
   std::string dirApp = dir.append("app-delays-trace.txt");
+  std::cout << "dirApp: " << dirApp << "\n";
   ndn::AppDelayTracer::InstallAll(dirApp);
 
   Simulator::Run();

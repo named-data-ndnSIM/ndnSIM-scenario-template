@@ -7,3 +7,7 @@
 build/
 *.pyc
 .vscode*
+graphs/data/
+graphs/.RData
+graphs/.Rhistory
+save/

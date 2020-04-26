@@ -34,7 +34,7 @@ ProactiveProducer::GetTypeId(void)
                     MakeUintegerChecker<uint32_t>())
 
       .AddAttribute("Freshness", "Freshness of data packets, if 0, then unlimited freshness",
-                    TimeValue(Seconds(0)), MakeTimeAccessor(&ProactiveProducer::m_freshness),
+                    TimeValue(MilliSeconds(0)), MakeTimeAccessor(&ProactiveProducer::m_freshness),
                     MakeTimeChecker())
 
       .AddAttribute("Frequency", "Frequency for pushing of data packets", StringValue("1.0"),
