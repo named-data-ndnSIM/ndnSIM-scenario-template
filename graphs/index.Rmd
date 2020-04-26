@@ -4,15 +4,16 @@ author: "Christopher Lynch"
 theme: lumen
 always_allow_html: true
 output:
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+    number_sections: yes
   html_document:
     number_sections: yes
     toc: yes
     toc_collapsed: yes
     toc_depth: 3
     toc_float: yes
-  pdf_document:
-    toc: yes
-    toc_depth: '3'
 ---
 
 ```{r setup, include = FALSE, error = FALSE}
@@ -38,7 +39,7 @@ my_theme <- function(base_size = 12, base_family = "Helvetica"){
 }
 ```
 
-``` {r functions, include=FALSE}
+``` {r functions, echo=FALSE}
 setwd("~/workspace/github.com/ChrisLynch96/masters-project/scenario-template/graphs")
 
 disseminationMethods <- c("pure-ndn", "unsolicited", "proactive")
@@ -92,8 +93,6 @@ plot_packet_all_total2 <- function(dir) {
     ylab("Packet Numbers")
   
   fig <- ggplotly(g.packets.total)
-  
-  fig
 }
 
 plot_delay_all_total <- function(disseminationMethod, dir) {
@@ -123,8 +122,6 @@ plot_delay_all_total2 <- function(dir) {
     ylab("Delay (seconds)")
   
   fig <- ggplotly(g.last.delay)
-  
-  fig
 }
 
 combine_methods_packet <- function(dir, delay = FALSE) {
@@ -192,23 +189,28 @@ disseminationMethod <- disseminationMethods[1]
 
 directories <- get_directories(disseminationMethod)
 
-l <- htmltools::tagList()
+#l <- htmltools::tagList()
 for (i in 1:length(directories)) {
   dir <- directories[i]
-  l[[i]] <- plot_packet_all_total(disseminationMethod, dir)
+  #l[[i]] <- plot_packet_all_total(disseminationMethod, dir)
+  fig <- plot_packet_all_total(disseminationMethod, dir)
+  print(fig)
 }
-l
+#l
 ```
 
 ### Latency (Last Delay)
 
 ``` {r echo=FALSE, message=FALSE, warning=FALSE}
-l <- htmltools::tagList()
+#l <- htmltools::tagList()
 for(i in 1:length(directories)) {
   dir <- directories[i]
-  l[[i]] <- plot_delay_all_total(disseminationMethod, dir)
+  #l[[i]] <- plot_delay_all_total(disseminationMethod, dir)
+  fig <- plot_delay_all_total(disseminationMethod, dir)
+  
+  print(fig)
 }
-l
+#l
 ```
 
 ### No. Data packets received
@@ -221,23 +223,27 @@ l
 disseminationMethod <- disseminationMethods[2]
 directories <- get_directories(disseminationMethod)
 
-l <- htmltools::tagList()
+#l <- htmltools::tagList()
 for (i in 1:length(directories)) {
   dir <- directories[i]
-  l[[i]] <- plot_packet_all_total(disseminationMethod, dir)
+  #l[[i]] <- plot_packet_all_total(disseminationMethod, dir)
+ fig <- plot_packet_all_total(disseminationMethod, dir)
+ print(fig)
 }
-l
+#l
 ```
 
 ### Latency (Last Delay)
 
 ``` {r echo=FALSE, message=FALSE, warning=FALSE}
-l <- htmltools::tagList()
+#l <- htmltools::tagList()
 for(i in 1:length(directories)) {
   dir <- directories[i]
-  l[[i]] <- plot_delay_all_total(disseminationMethod, dir)
+  #l[[i]] <- plot_delay_all_total(disseminationMethod, dir)
+  fig <- plot_delay_all_total(disseminationMethod, dir)
+  print(fig)
 }
-l
+#l
 ```
 
 ## Proactive
@@ -251,23 +257,27 @@ directories <- get_directories(disseminationMethod)
 
 #plot_packet_totals(disseminationMethod = disseminationMethod, dir = directories[1])
 
-l <- htmltools::tagList()
+#l <- htmltools::tagList()
 for (i in 1:length(directories)) {
   dir <- directories[i]
-  l[[i]] <- plot_packet_all_total(disseminationMethod, dir)
+  #l[[i]] <- plot_packet_all_total(disseminationMethod, dir)
+  fig <- plot_packet_all_total(disseminationMethod, dir)
+  print(fig)
 }
-l
+#l
 ```
 
 ### Latency (Last Delay)
 
 ``` {r echo=FALSE, message=FALSE, warning=FALSE}
-l <- htmltools::tagList()
+#l <- htmltools::tagList()
 for(i in 1:length(directories)) {
   dir <- directories[i]
-  l[[i]] <- plot_delay_all_total(disseminationMethod, dir)
+  #l[[i]] <- plot_delay_all_total(disseminationMethod, dir)
+  fig <- plot_delay_all_total(disseminationMethod, dir)
+  print(fig)
 }
-l
+#l
 ```
 
 # Packet Numbers comparison
@@ -276,23 +286,27 @@ l
 
 directories <- get_directories(disseminationMethod)
 
-l <- htmltools::tagList()
+#l <- htmltools::tagList()
 for (i in 1:length(directories)) {
   dir <- directories[i]
-  l[[i]] <- plot_packet_all_total2(dir)
+  #l[[i]] <- plot_packet_all_total2(dir)
+  fig <- plot_packet_all_total2(dir)
+  print(fig)
 }
-l
+#l
 ```
 
 # Last Delay comparison
 
 ``` {r echo=FALSE, message=FALSE, warning=FALSE}
-l <- htmltools::tagList()
+#l <- htmltools::tagList()
 for(i in 1:length(directories)) {
   dir <- directories[i]
-  l[[i]] <- plot_delay_all_total2(dir)
+  #l[[i]] <- plot_delay_all_total2(dir)
+  fig <- plot_delay_all_total2(dir)
+  print(fig)
 }
-l
+#l
 ```
 
 
