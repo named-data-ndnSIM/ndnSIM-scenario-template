@@ -229,13 +229,14 @@ plot_packet_all_box <- function(dir) {
   
   group.colours <- c("pure-ndn_1s" = "#F88077", "unsolicited_1s" = "#19C034", "proactive_1s" = "#6AA9FF", "pure-ndn_100ms" = "#f5493d", "unsolicited_100ms" = "#0f711f", "proactive_100ms" = "#1a79ff")
   
-  g.packets.total.box <- ggplot(data = data.combined.total, aes(x=method, y=PacketRaw, colour=method)) +
+  g.packets.total.box <- ggplot(data = data.combined.total, aes(x=method, y=PacketRaw, fill=method)) +
     geom_boxplot() +
     ggtitle(dir) +
     xlab("Method") +
     ylab("Packet Numbers") +
     scale_fill_manual(values=group.colours) +
-    theme_light()
+    theme_light() +
+    theme(axis.text.x = element_blank())
 }
 
 plot_delay_all_total2 <- function(dir) {

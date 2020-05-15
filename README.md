@@ -1,7 +1,7 @@
 Prerequisites
 =============
 
-Custom version of NS-3 and specified version of ndnSIM needs to be installed (see instructions below).
+Custom version of NS-3 and specified version of ndnSIM need to be installed (see instructions below).
 
 - NS-3-dev commit hash: cc8cccf59ddd47d047ea6c4500590b1c8e2b1fb1
 - NDNSim commit hash: 387843039ad34f2350d00ba63aa1c061502a6913
@@ -11,7 +11,7 @@ The code should also work with the latest version of ndnSIM, but it is not guara
 The visualiser is extremely unstable. Here are some issues I faced:
 
 - Try using `from __future__ import print_function` where you get compilation issues due to the incorrect print function being used.
-- The above version of ns-3-dev seems to have an infinite [loop issue in the visualizer](https://github.com/named-data-ndnSIM/ndnSIM/issues/93). Outputting an error like such `RuntimeError: maximum recursion depth exceeded while calling a Python object`. Quick fix is to change `from . import core` to `import core` in ns-3/src/visualizer/visualizer/hud.py
+- The above version of ns-3-dev seems to have an infinite [loop issue in the visualizer](https://github.com/named-data-ndnSIM/ndnSIM/issues/93). Outputting an error like such: `RuntimeError: maximum recursion depth exceeded while calling a Python object`. Quick fix is to change `from . import core` to `import core` in ns-3/src/visualizer/visualizer/hud.py
 
 Follow the steps detailed [here](https://ndnsim.net/current/getting-started.html) to get set up correctly
 
@@ -121,9 +121,16 @@ or
 
     PKG_LIBRARY_PATH=/usr/local/lib NS_VIS_ASSIGN=1 ./waf --run <scenario_name> --vis
 
-Available simulations
+Simuation
 =====================
 
-<mobility-test>
----------------
-A simple simulation created to test this repo setup, the mobility and ad-hoc modes
+### glosa-with-freshness
+
+- Replicates an intersection with a traffic light emanating the communication pattern of a GLOSA system.
+- Requirements to run: Trace files defining the path taken by nodes in the network. Found [here](./scenarios/trace-files)
+- Attributes
+    - traceFile: relative path to trace file which will be used in the simulation.
+    - disseminationMethod: The dissemination method to be used in the simulation. Used for placing resultant data in the correct directory.
+    - range: The range of communication for nodes in the network. Can be either 100, 200 or 300 metres.
+- Resultant data will be output into ```graphs/data/<data_dissemination_method_here>/``` folder.
+- NB: The NFD submodule needs to be altered to use the the correct ```UnsolicitedDataPolicy``` derivative. For *Unsolicited data* and *pure NDN* use ```DropAllUnsolicitedDataPolicy```. For the `proactive pushing` use either ```AdmitAllUnsolicitedDataPolicy``` or ```AdmitNetworkUnsolicitedDataPolicy```.
