@@ -103,6 +103,14 @@ main(int argc, char* argv[])
   ndnHelper.SetOldContentStore("ns3::ndn::cs::Freshness::Lru","MaxSize", "100"); // Old content store so that cache hit tracing can be used
   ndnHelper.InstallAll();
 
+  // APPLICATIONS //
+
+  // consumer applications (really just intermediary nodes)
+
+  ndn::AppHelper consumerHelper("ForwardingConsumer");
+  consumerHelper.SetPrefix("/cam");
+  consumerHelper.Install(consumerNodes);
+
   // proactive producer application
 
   ndn::AppHelper producerHelper("ns3::ndn::ProactiveProducer");
