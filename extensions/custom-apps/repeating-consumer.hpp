@@ -89,4 +89,4 @@ private:
 
 } // namespace ns3
 
-#endif // DUMB_REQUESTER_H_
+#endif
