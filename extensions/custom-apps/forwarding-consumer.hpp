@@ -27,8 +27,8 @@
 #include "ns3/ndnSIM/apps/ndn-app.hpp"
 #include "ns3/random-variable-stream.h"
 
-namespace ns3
-{
+namespace ns3 {
+namespace ndn {
 
   /**
  * @brief A dumb requester application
@@ -66,6 +66,7 @@ namespace ns3
     ndn::Name m_prefix;
   };
 
+} // namespace ndn
 } // namespace ns3
 
 #endif

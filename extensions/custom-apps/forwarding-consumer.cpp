@@ -14,11 +14,13 @@
 #include "ndn-cxx/util/time.hpp"
 
 #include <ndn-cxx/lp/tags.hpp>
+#include "model/ndn-l3-protocol.hpp"
 #include "helper/ndn-fib-helper.hpp"
 
 NS_LOG_COMPONENT_DEFINE("ndn.ForwardingConsumer");
 
 namespace ns3 {
+namespace ndn {
 
 NS_OBJECT_ENSURE_REGISTERED(ForwardingConsumer);
 
@@ -49,8 +51,17 @@ ForwardingConsumer::StartApplication()
   // initialize ndn::App
   ndn::App::StartApplication();
 
-  // route to the application
+  // route to the application interface
   ndn::FibHelper::AddRoute(GetNode(), m_prefix, m_face, 0);
+
+  // step 1: get net device of this node...
+  Ptr<NetDevice> device = GetNode()->GetDevice(0);
+
+  // step 2: get face from net device...
+  shared_ptr<ndn::Face> m_broadcastFace = GetNode()->GetObject<ndn::L3Protocol>()->getFaceByNetDevice(device);
+
+  // step 3: add net device to push data out of to FIB
+  ndn::FibHelper::AddRoute(GetNode(), m_prefix, m_broadcastFace, 0);
 
   m_isRunning = true;
 }
@@ -108,4 +119,5 @@ ForwardingConsumer::OnNack(std::shared_ptr<const ndn::lp::Nack> nack)
               << ", reason: " << nack->getReason());
 }
 
+} // namespace ndn
 } // namespace ns3
