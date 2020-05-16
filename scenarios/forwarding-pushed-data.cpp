@@ -18,15 +18,12 @@
 #include "ns3/wifi-80211p-helper.h"
 #include "ns3/wave-mac-helper.h"
 
-
 namespace ns3 {
 
 int
 main(int argc, char* argv[])
 {
   //configuration parameters
-  std::string traceFile;
-  std::string disseminationMethod;
   std::string phyMode ("OfdmRate6MbpsBW10MHz");
   std::string range = "100"; // desired transmission range for the signal
   double range_d = 3.0;
@@ -36,56 +33,14 @@ main(int argc, char* argv[])
 
   // Read optional command-line parameters (e.g., enable visualizer with ./waf --run=<> --visualize
   CommandLine cmd;
-  cmd.AddValue ("traceFile", "Ns2 movement trace file", traceFile);
-  cmd.AddValue ("disseminationMethod", "The method of information dissemination: 'pure-ndn', 'unsolicited', or 'proactive'", disseminationMethod);
   cmd.AddValue ("range", "The maximm range for transmission, can be 100, 200 or 300 metres", range);
   cmd.Parse(argc, argv);
 
-  // setting up mobility so I can alter the traceFile string as necessary
-  Ns2MobilityHelper ns2Mobility = Ns2MobilityHelper (traceFile);
-
-  const size_t last_slash_idx = traceFile.find_last_of("\\/");
-  if (std::string::npos != last_slash_idx)
-  {
-      traceFile.erase(0, last_slash_idx + 1);
-  }
-
-  // Remove extension if present.
-  const size_t period_idx = traceFile.rfind('.');
-  if (std::string::npos != period_idx)
-  {
-      traceFile.erase(period_idx);
-  }
-
-  std::cout << traceFile << "\n";
-
-  // getting number of nodes
-  std::string delimiter = "n";
-  std::string token = traceFile.substr(0, traceFile.find(delimiter));
-  nodeNum = std::stoi(token);
-
-  std::cout << nodeNum << "\n";
-
-  std::ostringstream oss;
-  oss << "./graphs/data/" << disseminationMethod << "/" << traceFile << "-" << range << "m/";
-  std::string dir = oss.str();
-
-  if(!boost::filesystem::create_directory(dir))
-  {
-    dir = "./graphs/data/";
-  }
-
-  // Creating nodes
+  // testing configuration
   NodeContainer consumerNodes;
-  consumerNodes.Create(nodeNum);
+  consumerNodes.Create(2);
   NodeContainer producerNodes;
   producerNodes.Create(1);
-
-  // testing configuration
-  // NodeContainer consumerNodes;
-  // consumerNodes.Create(1);
-  // NodeContainer producerNodes;
-  // producerNodes.Create(1);
 
   if (range == "200") {
     std::cout << range << "\n";
@@ -99,21 +54,25 @@ main(int argc, char* argv[])
 
   //Mobility must be installed before wifi NICs
 
-  // Mobility for vehicles comes from traceFile
-  ns2Mobility.Install();
-
   // testing configuration
-  // MobilityHelper testMobility;
-  // Ptr<ListPositionAllocator> testAlloc = CreateObject<ListPositionAllocator> ();
-  // testAlloc->Add(Vector (500.0, 415.0, 0.0));
-  // testMobility.SetPositionAllocator (testAlloc);
-  // testMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
-  // testMobility.Install(consumerNodes);
+  MobilityHelper testMobility;
+  Ptr<ListPositionAllocator> firstNodeAlloc = CreateObject<ListPositionAllocator> ();
+  firstNodeAlloc->Add(Vector (100.0, 150.0, 0.0));
+  testMobility.SetPositionAllocator (firstNodeAlloc);
+  testMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+  testMobility.Install(consumerNodes.Get(0));
+
+  MobilityHelper secondNodeMobility;
+  Ptr<ListPositionAllocator> secondNodeAlloc = CreateObject<ListPositionAllocator> ();
+  secondNodeAlloc->Add(Vector (200.0, 150.0, 0.0));
+  secondNodeMobility.SetPositionAllocator (secondNodeAlloc);
+  secondNodeMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+  secondNodeMobility.Install(consumerNodes.Get(1));
 
   // Mobility for traffic light is a fixed position ~intersection of nodes
   MobilityHelper trafficLightMobility;
   Ptr<ListPositionAllocator> posAlloc = CreateObject<ListPositionAllocator> ();
-  posAlloc->Add(Vector (500.0, 405.0, 0.0));
+  posAlloc->Add(Vector (300.0, 150.0, 0.0));
   trafficLightMobility.SetPositionAllocator (posAlloc);
   trafficLightMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   trafficLightMobility.Install(producerNodes);
@@ -141,59 +100,19 @@ main(int argc, char* argv[])
   // Install Ndn stack on all nodes
   ndn::StackHelper ndnHelper;
   ndnHelper.SetDefaultRoutes(true);
-
-  // new cache
-  // ndnHelper.setCsSize(2); // allow just 2 entries to be cached
-  // ndnHelper.setPolicy("nfd::cs::lru");
   ndnHelper.SetOldContentStore("ns3::ndn::cs::Freshness::Lru","MaxSize", "100"); // Old content store so that cache hit tracing can be used
-  ndnHelper.Install(consumerNodes);
+  ndnHelper.InstallAll();
 
-  ndnHelper.SetOldContentStore("ns3::ndn::cs::Nocache");
-  ndnHelper.Install(producerNodes);
-
-  // Installing applications
-
-  // Consumer
-  ndn::AppHelper consumerHelper("RepeatingConsumer");
-
-  consumerHelper.SetPrefix("/cam");
-  consumerHelper.SetAttribute("Frequency", DoubleValue(frequency));
-  consumerHelper.Install(consumerNodes);
-
-  // ** normal producer **
-
-  // ndn::AppHelper producerHelper("ns3::ndn::Producer");
-  // producerHelper.SetAttribute("PayloadSize", StringValue("600"));
-  // producerHelper.SetAttribute("Freshness", TimeValue(MilliSeconds(frequency*1000)));
-  // producerHelper.SetPrefix("/cam");
-  // producerHelper.Install(producerNodes);
-
-  // ** proactive producer **
+  // proactive producer application
 
   ndn::AppHelper producerHelper("ns3::ndn::ProactiveProducer");
   producerHelper.SetAttribute("PayloadSize", StringValue("600"));
   producerHelper.SetAttribute("Freshness", TimeValue(MilliSeconds(frequency*1000)));
-  producerHelper.SetAttribute("Frequency", DoubleValue(frequency));
+  producerHelper.SetAttribute("Frequency", DoubleValue(5));
   producerHelper.SetPrefix("/cam");
   producerHelper.Install(producerNodes);
 
   Simulator::Stop(Seconds(100.0));
-
-  std::ostringstream osss;
-  osss << dir << "rate-trace.txt";
-  std::string dirRate = osss.str();
-  std::cout << "dirRate: " << dirRate << "\n";
-  ndn::L3RateTracer::InstallAll(dirRate, Seconds(1));
-
-  std::ostringstream csss;
-  csss << dir << "cs-trace.txt";
-  std::string dirCS = csss.str();
-  std::cout << "dirCS: " << dirCS << "\n";
-  ndn::CsTracer::InstallAll(dirCS, Seconds(1));
-
-  std::string dirApp = dir.append("app-delays-trace.txt");
-  std::cout << "dirApp: " << dirApp << "\n";
-  ndn::AppDelayTracer::InstallAll(dirApp);
 
   Simulator::Run();
   Simulator::Destroy();

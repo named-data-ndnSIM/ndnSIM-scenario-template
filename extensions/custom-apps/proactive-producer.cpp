@@ -132,7 +132,7 @@ ProactiveProducer::SendData(Name dataName, bool pushed)
 
   data->setSignature(signature);
 
-  NS_LOG_DEBUG("Data=" << data->getName() << " face=" << m_face->getId() << " pushed=" << data->getPushed());
+  NS_LOG_DEBUG("Data=" << data->getName() << " face=" << m_face->getId() << " pushed=" << data->getPushed() << " incomingPacket=" << data->getIncomingPacket());
 
   // to create real wire encoding
   data->wireEncode();
