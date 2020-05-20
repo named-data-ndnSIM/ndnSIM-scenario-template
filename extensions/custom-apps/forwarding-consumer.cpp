@@ -84,7 +84,7 @@ ForwardingConsumer::OnData(std::shared_ptr<const ndn::Data> data)
   NS_LOG_FUNCTION_NOARGS();
 
   App::OnData(data);
-  NS_LOG_DEBUG("<< D: " << data->getName() << " freshness=" << static_cast<ndn::time::milliseconds>(data->getFreshnessPeriod()) << " pushed=" << data->getPushed() << " incomingPacket=" << data->getIncomingPacket());
+  NS_LOG_DEBUG("<< D: " << data->getName() << " freshness=" << static_cast<ndn::time::milliseconds>(data->getFreshnessPeriod()) << " pushed=" << data->getPushed());
 
   int hopCount = 0;
   auto hopCountTag = data->getTag<ndn::lp::HopCountTag>();
@@ -96,7 +96,7 @@ ForwardingConsumer::OnData(std::shared_ptr<const ndn::Data> data)
 
   // If the data is pushed then the node should attempt to forward the data once again
   if(data->getPushed()) {
-    NS_LOG_DEBUG("Forwarding data " << data->getName() << " pushed=" << data->getPushed() << " incomingPacket=" << data->getIncomingPacket());
+    NS_LOG_DEBUG("Forwarding data " << data->getName() << " pushed=" << data->getPushed());
 
     // to create real wire encoding
     data->wireEncode();
