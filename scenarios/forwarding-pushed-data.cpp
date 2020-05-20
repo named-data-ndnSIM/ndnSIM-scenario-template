@@ -27,13 +27,14 @@ main(int argc, char* argv[])
   std::string phyMode ("OfdmRate6MbpsBW10MHz");
   std::string range = "100"; // desired transmission range for the signal
   double range_d = 3.0;
+  int range_i = 100;
   std::string payloadSize = "600";
   double frequency = 1;
   int nodeNum;
 
   // Read optional command-line parameters (e.g., enable visualizer with ./waf --run=<> --visualize
   CommandLine cmd;
-  cmd.AddValue ("range", "The maximm range for transmission, can be 100, 200 or 300 metres", range);
+  cmd.AddValue ("range", "The maximm range for transmission, can be 100-1000 in increments of 100", range);
   cmd.Parse(argc, argv);
 
   // testing configuration
@@ -42,40 +43,53 @@ main(int argc, char* argv[])
   NodeContainer producerNodes;
   producerNodes.Create(1);
 
+  // range variable configurations
+  range_i = stoi(range);
+
+  std::cout << range << "\n";
   if (range == "200") {
-    std::cout << range << "\n";
     range_d = 2.72;
   } else if (range == "300") {
-    std::cout << range << "\n";
     range_d = 2.55;
-  }else {
-    std::cout << range << "\n";
+  } else if (range == "400") {
+    range_d = 2.43;
+  } else if (range == "500") {
+    range_d = 2.34;
+  } else if (range == "600") {
+    range_d = 2.27;
+  } else if (range == "700") {
+    range_d = 2.22;
+  } else if (range == "800") {
+    range_d = 2.18;
+  } else if (range == "900") {
+    range_d = 2.14; 
+  } else if (range == "1000") {
+    range_d = 2.1;
   }
 
   //Mobility must be installed before wifi NICs
 
-  // testing configuration
+  // Node 1
   MobilityHelper testMobility;
   Ptr<ListPositionAllocator> firstNodeAlloc = CreateObject<ListPositionAllocator> ();
-  firstNodeAlloc->Add(Vector (100.0, 150.0, 0.0));
+  firstNodeAlloc->Add(Vector (0.0, 150.0, 0.0));
   testMobility.SetPositionAllocator (firstNodeAlloc);
   testMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   testMobility.Install(consumerNodes.Get(0));
 
-  MobilityHelper secondNodeMobility;
+  // Node 2
   Ptr<ListPositionAllocator> secondNodeAlloc = CreateObject<ListPositionAllocator> ();
-  secondNodeAlloc->Add(Vector (200.0, 150.0, 0.0));
-  secondNodeMobility.SetPositionAllocator (secondNodeAlloc);
-  secondNodeMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
-  secondNodeMobility.Install(consumerNodes.Get(1));
+  secondNodeAlloc->Add(Vector (range_i, 150.0, 0.0));
+  testMobility.SetPositionAllocator (secondNodeAlloc);
+  testMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+  testMobility.Install(consumerNodes.Get(1));
 
-  // Mobility for traffic light is a fixed position ~intersection of nodes
-  MobilityHelper trafficLightMobility;
+  // Node 3
   Ptr<ListPositionAllocator> posAlloc = CreateObject<ListPositionAllocator> ();
-  posAlloc->Add(Vector (300.0, 150.0, 0.0));
-  trafficLightMobility.SetPositionAllocator (posAlloc);
-  trafficLightMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
-  trafficLightMobility.Install(producerNodes);
+  posAlloc->Add(Vector (range_i*2, 150.0, 0.0));
+  testMobility.SetPositionAllocator (posAlloc);
+  testMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+  testMobility.Install(producerNodes);
 
   YansWifiChannelHelper wifiChannel;
   wifiChannel.SetPropagationDelay("ns3::ConstantSpeedPropagationDelayModel");
@@ -116,7 +130,7 @@ main(int argc, char* argv[])
   ndn::AppHelper producerHelper("ns3::ndn::ProactiveProducer");
   producerHelper.SetAttribute("PayloadSize", StringValue("600"));
   producerHelper.SetAttribute("Freshness", TimeValue(MilliSeconds(frequency*1000)));
-  producerHelper.SetAttribute("Frequency", DoubleValue(5));
+  producerHelper.SetAttribute("Frequency", DoubleValue(frequency));
   producerHelper.SetPrefix("/cam");
   producerHelper.Install(producerNodes);
 
