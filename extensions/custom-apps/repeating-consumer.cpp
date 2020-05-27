@@ -11,8 +11,10 @@
 #include "ns3/integer.h"
 #include "ns3/double.h"
 #include "ns3/random-variable-stream.h"
-#include "ndn-cxx/util/time.hpp"
+#include "ns3/mobility-module.h"
+#include "ns3/core-module.h"
 
+#include "ndn-cxx/util/time.hpp"
 #include <ndn-cxx/lp/tags.hpp>
 
 NS_LOG_COMPONENT_DEFINE("RepeatingConsumer");
@@ -112,27 +114,46 @@ RepeatingConsumer::SendInterest()
   // Sending one Interest packet out //
   /////////////////////////////////////
 
-  // Create and configure ndn::Interest
-  auto interest = std::make_shared<ndn::Interest>(m_name);
-  Ptr<UniformRandomVariable> rand = CreateObject<UniformRandomVariable>();
-  interest->setNonce(rand->GetValue(0, std::numeric_limits<uint32_t>::max()));
-  interest->setInterestLifetime(ndn::time::seconds(1));
-  interest->setMustBeFresh(true);
+  // Create check for vehicle coordinates... If nodes is outside defined communication range then skip sending interest.
+  Ptr<MobilityModel> mobility = GetNode()->GetObject<MobilityModel>();
+  Vector currentPosition = mobility->GetPosition();
+  double x = currentPosition.x;
+  double y = currentPosition.y;
+  std::cout << "x position: " << currentPosition.x << "y position " << currentPosition.y << "\n";
 
-  // NS_LOG_DEBUG("Sending Interest packet for " << m_name);
+  if (canSendInterest(x, y)) {
+    auto interest = std::make_shared<ndn::Interest>(m_name);
+    Ptr<UniformRandomVariable> rand = CreateObject<UniformRandomVariable>();
+    interest->setNonce(rand->GetValue(0, std::numeric_limits<uint32_t>::max()));
+    interest->setInterestLifetime(ndn::time::seconds(1));
+    interest->setMustBeFresh(true);
 
-  m_waitingForData = true;
-  m_lastInterestSentTime = Simulator::Now();
+    // NS_LOG_DEBUG("Sending Interest packet for " << m_name);
 
-  // Call trace (for logging purposes)
-  m_transmittedInterests(interest, this, m_face);
+    m_waitingForData = true;
+    m_lastInterestSentTime = Simulator::Now();
 
-  NS_LOG_DEBUG(">> I: " << m_name);
+    // Call trace (for logging purposes)
+    m_transmittedInterests(interest, this, m_face);
 
-  // Forward packet to lower (network) layer
-  m_appLink->onReceiveInterest(*interest);
+    NS_LOG_DEBUG(">> I: " << m_name);
+
+    // Forward packet to lower (network) layer
+    m_appLink->onReceiveInterest(*interest);
+  }
 
   ScheduleNextPacket();
+}
+
+bool
+RepeatingConsumer::canSendInterest(double x, double y) {
+  if(x < 50 || x > 950) {
+    return false;
+  } else if(y < 50 || y > 750) {
+    return false;
+  }
+
+  return true;
 }
 
 void

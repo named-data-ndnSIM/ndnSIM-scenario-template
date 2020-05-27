@@ -54,6 +54,10 @@ public:
   virtual void
   OnData(std::shared_ptr<const ndn::Data> data);
 
+  // Nodes sitting at the edge should not communicate and this check is used to implement that behaviour
+  virtual bool
+  canSendInterest(double x, double y);
+
   // (overridden from ndn::App) Callback that will be called when NACK arrives
   virtual void
   OnNack(std::shared_ptr<const ndn::lp::Nack> nack);
