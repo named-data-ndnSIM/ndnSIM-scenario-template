@@ -4,6 +4,6 @@ traceFiles=("47n-285v-30kmh" "47n-285v-60kmh" "47n-285v-100kmh" "113n-950v-30kmh
 
 for i in ${traceFiles[@]}; do
   for j in ${ranges[@]}; do
-    ./waf --run "glosa-with-freshness --traceFile=scenarios/trace-files/$i.tcl --disseminationMethod=unsolicited_100ms --range=$j"
+    ./waf --run "glosa-with-freshness --traceFile=scenarios/trace-files/$i.tcl --disseminationMethod=proactive_with_forwarding_100ms --range=$j"
   done
 done

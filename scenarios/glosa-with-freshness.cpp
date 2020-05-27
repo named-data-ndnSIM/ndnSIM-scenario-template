@@ -30,7 +30,7 @@ main(int argc, char* argv[])
   std::string range = "100"; // desired transmission range for the signal
   double range_d = 3.0;
   std::string payloadSize = "600";
-  double frequency = 1;
+  double frequency = .1;
   int nodeNum;
 
   // Read optional command-line parameters (e.g., enable visualizer with ./waf --run=<> --visualize

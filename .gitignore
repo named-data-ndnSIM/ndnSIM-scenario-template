@@ -10,3 +10,4 @@ build/
 /graphs/data/
 .RData
 .Rhistory
+*.pdf
