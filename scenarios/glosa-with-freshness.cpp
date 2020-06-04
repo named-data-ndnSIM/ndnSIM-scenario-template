@@ -107,7 +107,7 @@ main(int argc, char* argv[])
   // Mobility for traffic light is a fixed position ~intersection of nodes
   MobilityHelper trafficLightMobility;
   Ptr<ListPositionAllocator> posAlloc = CreateObject<ListPositionAllocator> ();
-  posAlloc->Add(Vector (500.0, 405.0, 0.0));
+  posAlloc->Add(Vector (2010.0, 2010.0, 0.0));
   trafficLightMobility.SetPositionAllocator (posAlloc);
   trafficLightMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   trafficLightMobility.Install(producerNodes);
@@ -159,7 +159,7 @@ main(int argc, char* argv[])
   producerHelper.SetPrefix("/cam");
   producerHelper.Install(producerNodes);
 
-  Simulator::Stop(Seconds(100.0));
+  Simulator::Stop(Seconds(350.0));
 
   std::ostringstream osss;
   osss << dir << "rate-trace.txt";
