@@ -137,7 +137,6 @@ main(int argc, char* argv[])
   ndnHelper.InstallAll();
 
   // Installing applications
-  // Consumer
   ndn::AppHelper consumerHelper("RepeatingConsumer");
   consumerHelper.SetPrefix("/cam");
   consumerHelper.SetAttribute("Frequency", DoubleValue(frequency));
