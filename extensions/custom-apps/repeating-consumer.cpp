@@ -167,9 +167,9 @@ RepeatingConsumer::getPosition() {
 bool
 RepeatingConsumer::canCommunicate(double x, double y) {
   NS_LOG_DEBUG ("checking position x: " << x << " y: " << y);
-  if(x < 50 || x > 950) {
+  if(x < 710 || x > 3290) {
     return false;
-  } else if(y < 50 || y > 750) {
+  } else if(y < 710 || y > 3290) {
     return false;
   }
   return true;
