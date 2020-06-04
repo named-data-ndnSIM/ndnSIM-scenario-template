@@ -82,16 +82,24 @@ main(int argc, char* argv[])
   producerNodes.Create(1);
 
   if (range == "200") {
-    std::cout << range << "\n";
     range_d = 2.72;
   } else if (range == "300") {
-    std::cout << range << "\n";
     range_d = 2.55;
-  }else {
-    std::cout << range << "\n";
+  } else if (range == "400") {
+    range_d = 2.43;
+  } else if (range == "500") {
+    range_d = 2.34;
+  } else if (range == "600") {
+    range_d = 2.27;
+  } else if (range == "700") {
+    range_d = 2.22;
+  } else if (range == "800") {
+    range_d = 2.18;
+  } else if (range == "900") {
+    range_d = 2.14; 
+  } else if (range == "1000") {
+    range_d = 2.1;
   }
-
-  //Mobility must be installed before wifi NICs
 
   // Mobility for vehicles comes from traceFile
   ns2Mobility.Install();
