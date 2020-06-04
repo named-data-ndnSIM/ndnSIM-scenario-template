@@ -172,7 +172,6 @@ RepeatingConsumer::canCommunicate(double x, double y) {
   } else if(y < 50 || y > 750) {
     return false;
   }
-
   return true;
 }
 
