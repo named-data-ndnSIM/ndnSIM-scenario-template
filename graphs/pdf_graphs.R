@@ -371,9 +371,11 @@ convert_vehicles_to_percentages <- function(density) {
 }
 
 correct_order_of_factors <- function(data.frame) {
+  # Requires implicit knowledge about the factors and levels being used and the order of the levels...
   data.frame$method <- factor(data.frame$method, levels=c("pure-ndn_1s", "pure-ndn_100ms", "unsolicited_1s", "unsolicited_100ms", "proactive_1s", "proactive_100ms", "proactive_forwarding_1s", "proactive_forwarding_100ms"))
   data.frame$density <- factor(data.frame$density, levels=c("15%", "50%", "100%"))
   data.frame$speed <- factor(data.frame$speed, levels=c("30kmh", "60kmh", "100kmh"))
+  data.frame$range <- factor(data.frame$range, levels=c("100", "200", "300"))
   
   return(data.frame)
 }
@@ -531,9 +533,9 @@ all.packets <- combine_all_data(directories = directories, traceFile = traceFile
 all.delay <- combine_all_data(directories = directories, traceFile = traceFiles[2])
 all.cache <- combine_all_data(directories = directories, traceFile = traceFiles[3])
 
-all.packets <- subset_by_time(all.packets, 20)
-all.delay <- subset_by_time(all.delay, 20)
-all.cache <- subset_by_time(all.cache, 20)
+all.packets <- subset_by_time(all.packets, 60)
+all.delay <- subset_by_time(all.delay, 60)
+all.cache <- subset_by_time(all.cache, 60)
 
 all.packets$density <- convert_vehicles_to_percentages(all.packets$density)
 all.delay$density <- convert_vehicles_to_percentages(all.delay$density)
