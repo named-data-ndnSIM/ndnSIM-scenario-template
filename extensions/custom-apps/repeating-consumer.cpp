@@ -119,7 +119,6 @@ RepeatingConsumer::SendInterest()
   Vector currentPosition = mobility->GetPosition();
   double x = currentPosition.x;
   double y = currentPosition.y;
-  std::cout << "x position: " << currentPosition.x << "y position " << currentPosition.y << "\n";
 
   if (canSendInterest(x, y)) {
     auto interest = std::make_shared<ndn::Interest>(m_name);
@@ -127,8 +126,6 @@ RepeatingConsumer::SendInterest()
     interest->setNonce(rand->GetValue(0, std::numeric_limits<uint32_t>::max()));
     interest->setInterestLifetime(ndn::time::seconds(1));
     interest->setMustBeFresh(true);
-
-    // NS_LOG_DEBUG("Sending Interest packet for " << m_name);
 
     m_waitingForData = true;
     m_lastInterestSentTime = Simulator::Now();
@@ -170,6 +167,16 @@ RepeatingConsumer::OnData(std::shared_ptr<const ndn::Data> data)
     hopCount = *hopCountTag;
   } else {
     NS_LOG_DEBUG("Packet coming from local cache"); // not sure this is true
+  }
+
+  // If the data is pushed then the node should attempt to forward the data once again
+  if(data->getPushed()) {
+    NS_LOG_DEBUG("Forwarding data " << data->getName() << " pushed=" << data->getPushed());
+
+    data->wireEncode();
+
+    m_transmittedDatas(data, this, m_face);
+    m_appLink->onReceiveData(*data);
   }
 
   m_lastRetransmittedInterestDataDelay(this, 1, Simulator::Now() - m_lastInterestSentTime, hopCount);
