@@ -28,7 +28,7 @@
 #include "ns3/random-variable-stream.h"
 
 namespace ns3 {
-
+namespace ndn {
 /**
  * @brief A dumb requester application
  *
@@ -86,11 +86,12 @@ private:
   Ptr<RandomVariableStream> m_random;
 
   /// @cond include_hidden
-  TracedCallback<Ptr<App> /* app */, uint32_t /* cache hit? */, Time /* delay */, int32_t /*hop count*/>
+  TracedCallback<Ptr<App> /* app */, uint32_t /* seq No. */, Time /* delay */, int32_t /*hop count*/>
     m_lastRetransmittedInterestDataDelay;
   /// @endcond
 };
 
+} // namespace ndn
 } // namespace ns3
 
 #endif

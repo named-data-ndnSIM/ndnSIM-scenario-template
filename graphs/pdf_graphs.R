@@ -26,6 +26,7 @@ my_theme <- function(base_size = 12, base_family = "Helvetica"){
 ## functions and vars
 
 disseminationMethods <- c("pure-ndn_1s", "unsolicited_1s", "proactive_1s", "proactive_with_forwarding_1s", "pure-ndn_100ms", "unsolicited_100ms", "proactive_100ms", "proactive_with_forwarding_100ms")
+group.colours <- c("pure-ndn_1s" = "#F88077", "unsolicited_1s" = "#19C034", "proactive_1s" = "#6AA9FF", "proactive_forwarding_1s" = "#b37ff0", "pure-ndn_100ms" = "#f5493d", "unsolicited_100ms" = "#0f711f", "proactive_100ms" = "#1a79ff", "proactive_forwarding_100ms" = "#8934eb")
 
 plot_packet_all_total <- function(disseminationMethod, dir) {
   
@@ -574,6 +575,10 @@ aggregate_producer_packets_by_density <- function(directories) {
   return(all.packets)
 }
 
+plot_packets <- function(data.frame) {
+  
+}
+
 get_packets_at_producer <- function(data.packets) {
   producerNodeId <- get_producer_node_ID(data.packets)
   producer.frame <- get_data_frame_from_node_id(data.packets, producerNodeId)
@@ -585,6 +590,35 @@ get_producer_node_ID <- function(data.packets) {
 
 get_data_frame_from_node_id <- function(data.frame, nodeID) {
   return(data.frame[which(data.frame$Node == nodeID),])
+}
+
+plot_subset_of_packet_type_column <- function(data.frame, values, title) {
+  satisfied_interests <- get_dataframe_subset_by_column_value(data.frame, data.frame$Type, values)
+  satisfied_interests_method <- custom_aggregate(satisfied_interests, "PacketRaw")
+  return(plot_packet_method(satisfied_interests_method, title))
+}
+
+get_dataframe_subset_by_column_value <- function(data.frame, column, values) {
+  return(filter(data.frame, column %in% values))
+}
+
+custom_aggregate <- function (data.frame, target, columns = c("method"), fun = sum) {
+  formula <- as.formula(paste0(str_c(target, " ~"), paste(columns, collapse=" + ")))
+  data.frame <- aggregate(formula, data = data.frame, FUN = fun)
+  
+  return(data.frame)
+}
+
+plot_packet_method <- function(data.frame, title) {
+  plot <- ggplot(data.frame, aes(fill=method, y=PacketRaw, x=method)) + 
+    geom_bar(stat="identity") +
+    xlab("Method") +
+    ylab("Packets in the network") +
+    ggtitle(title) +
+    theme_light() +
+    theme(axis.text.x = element_blank()) +
+    scale_fill_manual(values=group.colours)
+  return(plot)
 }
 ## MAIN: playground to generate various pdfs ##
 
@@ -692,7 +726,6 @@ for(i in 1:length(plot.list)) {
 
 dev.off()
 #################################
-
 
 pdf("congestion-boxplots.pdf")
 ## packet numbers vs method

@@ -16,10 +16,13 @@
 
 #include "ndn-cxx/util/time.hpp"
 #include <ndn-cxx/lp/tags.hpp>
+#include "model/ndn-l3-protocol.hpp"
+#include "helper/ndn-fib-helper.hpp"
 
 NS_LOG_COMPONENT_DEFINE("RepeatingConsumer");
 
 namespace ns3 {
+namespace ndn {
 
 NS_OBJECT_ENSURE_REGISTERED(RepeatingConsumer);
 
@@ -60,8 +63,22 @@ RepeatingConsumer::StartApplication()
 
   // initialize ndn::App
   ndn::App::StartApplication();
+
+  // route to the application interface
+  ndn::FibHelper::AddRoute(GetNode(), m_name, m_face, 0);
+
+  // step 1: get net device of this node...
+  Ptr<NetDevice> device = GetNode()->GetDevice(0);
+
+  // step 2: get face from net device...
+  shared_ptr<ndn::Face> m_broadcastFace = GetNode()->GetObject<ndn::L3Protocol>()->getFaceByNetDevice(device);
+
+  // step 3: add net device to push data out of to FIB
+  ndn::FibHelper::AddRoute(GetNode(), m_name, m_broadcastFace, 0);
+
   SetRandomize();
   m_isRunning = true;
+  m_waitingForData = false;
   ScheduleNextPacket();
 }
 
@@ -70,7 +87,7 @@ RepeatingConsumer::ScheduleNextPacket()
 {
   NS_LOG_FUNCTION_NOARGS();
 
-  // NS_LOG_DEBUG ("m_sendEvent: " << m_sendEvent.IsRunning());
+  NS_LOG_DEBUG ("m_sendEvent: " << m_sendEvent.IsRunning());
   if (m_firstTime) {
     m_sendEvent = Simulator::Schedule(Seconds(m_random->GetValue()),
                                       &RepeatingConsumer::SendInterest, this);
@@ -124,13 +141,15 @@ RepeatingConsumer::SendInterest()
     auto interest = std::make_shared<ndn::Interest>(m_name);
     Ptr<UniformRandomVariable> rand = CreateObject<UniformRandomVariable>();
     interest->setNonce(rand->GetValue(0, std::numeric_limits<uint32_t>::max()));
-    interest->setInterestLifetime(ndn::time::seconds(1));
+    interest->setInterestLifetime(ndn::time::seconds(2));
     interest->setMustBeFresh(true);
 
-    m_waitingForData = true;
-    m_lastInterestSentTime = Simulator::Now();
+    if(!m_waitingForData) {
+      m_waitingForData = true;
+      m_lastInterestSentTime = Simulator::Now();
+    }
 
-    // Call trace (for logging purposes)
+    // ndn::App tracing for interest
     m_transmittedInterests(interest, this, m_face);
 
     NS_LOG_DEBUG(">> I: " << m_name);
@@ -179,8 +198,11 @@ RepeatingConsumer::OnData(std::shared_ptr<const ndn::Data> data)
     m_appLink->onReceiveData(*data);
   }
 
-  m_lastRetransmittedInterestDataDelay(this, 1, Simulator::Now() - m_lastInterestSentTime, hopCount);
-  NS_LOG_DEBUG ("logging last packet delay, delay=" << (Simulator::Now() - m_lastInterestSentTime));
+  if(m_waitingForData) {
+    m_lastRetransmittedInterestDataDelay(this, 1, Simulator::Now() - m_lastInterestSentTime, hopCount);
+    NS_LOG_DEBUG ("logging last packet delay, delay=" << (Simulator::Now() - m_lastInterestSentTime));
+    m_waitingForData = false;
+  }
 }
 
 void
@@ -195,4 +217,5 @@ RepeatingConsumer::OnNack(std::shared_ptr<const ndn::lp::Nack> nack)
               << ", reason: " << nack->getReason());
 }
 
+} // namespace ndn
 } // namespace ns3
