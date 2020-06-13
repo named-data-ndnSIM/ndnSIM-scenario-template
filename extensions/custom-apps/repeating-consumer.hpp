@@ -26,6 +26,7 @@
 #include "ns3/nstime.h"
 #include "ns3/ndnSIM/apps/ndn-app.hpp"
 #include "ns3/random-variable-stream.h"
+#include "ns3/core-module.h"
 
 namespace ns3 {
 namespace ndn {
@@ -56,7 +57,13 @@ public:
 
   // Nodes sitting at the edge should not communicate and this check is used to implement that behaviour
   virtual bool
-  canSendInterest(double x, double y);
+  canCommunicate(double x, double y);
+
+  virtual Vector
+  getPosition();
+
+  virtual void
+  setWaitingForData(bool isWaiting);
 
   // (overridden from ndn::App) Callback that will be called when NACK arrives
   virtual void

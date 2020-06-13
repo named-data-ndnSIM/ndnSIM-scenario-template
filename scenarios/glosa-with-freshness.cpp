@@ -30,7 +30,8 @@ main(int argc, char* argv[])
   std::string range = "100"; // desired transmission range for the signal
   double range_d = 3.0;
   std::string payloadSize = "600";
-  double frequency = .1;
+  double frequency = 1;
+  double freshness = frequency*1000;
   int nodeNum;
 
   // Read optional command-line parameters (e.g., enable visualizer with ./waf --run=<> --visualize
@@ -79,12 +80,6 @@ main(int argc, char* argv[])
   consumerNodes.Create(nodeNum);
   NodeContainer producerNodes;
   producerNodes.Create(1);
-
-  // testing configuration
-  // NodeContainer consumerNodes;
-  // consumerNodes.Create(1);
-  // NodeContainer producerNodes;
-  // producerNodes.Create(1);
 
   if (range == "200") {
     std::cout << range << "\n";
@@ -150,20 +145,20 @@ main(int argc, char* argv[])
 
   // ** normal producer **
 
-  ndn::AppHelper producerHelper("ns3::ndn::Producer");
-  producerHelper.SetAttribute("PayloadSize", StringValue("600"));
-  producerHelper.SetAttribute("Freshness", TimeValue(MilliSeconds(frequency*1000)));
-  producerHelper.SetPrefix("/cam");
-  producerHelper.Install(producerNodes);
+  // ndn::AppHelper producerHelper("ns3::ndn::Producer");
+  // producerHelper.SetAttribute("PayloadSize", StringValue("600"));
+  // producerHelper.SetAttribute("Freshness", TimeValue(MilliSeconds(freshness)));
+  // producerHelper.SetPrefix("/cam");
+  // producerHelper.Install(producerNodes);
 
   // ** proactive producer **
 
-  // ndn::AppHelper producerHelper("ns3::ndn::ProactiveProducer");
-  // producerHelper.SetAttribute("PayloadSize", StringValue("600"));
-  // producerHelper.SetAttribute("Freshness", TimeValue(MilliSeconds(frequency*1000)));
-  // producerHelper.SetAttribute("Frequency", DoubleValue(frequency));
-  // producerHelper.SetPrefix("/cam");
-  // producerHelper.Install(producerNodes);
+  ndn::AppHelper producerHelper("ns3::ndn::ProactiveProducer");
+  producerHelper.SetAttribute("PayloadSize", StringValue("600"));
+  producerHelper.SetAttribute("Freshness", TimeValue(MilliSeconds(freshness)));
+  producerHelper.SetAttribute("Frequency", DoubleValue(frequency));
+  producerHelper.SetPrefix("/cam");
+  producerHelper.Install(producerNodes);
 
   Simulator::Stop(Seconds(100.0));
 

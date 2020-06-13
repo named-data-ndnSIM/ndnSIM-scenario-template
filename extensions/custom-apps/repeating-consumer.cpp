@@ -104,7 +104,7 @@ RepeatingConsumer::SetRandomize()
 
   m_random = CreateObject<UniformRandomVariable>();
   m_random->SetAttribute("Min", DoubleValue(0.0));
-  m_random->SetAttribute("Max", DoubleValue(2 * 1.0 / m_frequency));
+  m_random->SetAttribute("Max", DoubleValue(1.0));
 }
 
 // Processing when application is stopped
@@ -127,25 +127,20 @@ RepeatingConsumer::SendInterest()
   if (!m_isRunning)
     return;
 
-  /////////////////////////////////////
-  // Sending one Interest packet out //
-  /////////////////////////////////////
-
   // Create check for vehicle coordinates... If nodes is outside defined communication range then skip sending interest.
-  Ptr<MobilityModel> mobility = GetNode()->GetObject<MobilityModel>();
-  Vector currentPosition = mobility->GetPosition();
+  Vector currentPosition = getPosition();
   double x = currentPosition.x;
   double y = currentPosition.y;
 
-  if (canSendInterest(x, y)) {
+  if (canCommunicate(x, y)) {
     auto interest = std::make_shared<ndn::Interest>(m_name);
     Ptr<UniformRandomVariable> rand = CreateObject<UniformRandomVariable>();
     interest->setNonce(rand->GetValue(0, std::numeric_limits<uint32_t>::max()));
     interest->setInterestLifetime(ndn::time::seconds(2));
     interest->setMustBeFresh(true);
 
-    if(!m_waitingForData) {
-      m_waitingForData = true;
+    if (!m_waitingForData) {
+      setWaitingForData(true);
       m_lastInterestSentTime = Simulator::Now();
     }
 
@@ -156,13 +151,22 @@ RepeatingConsumer::SendInterest()
 
     // Forward packet to lower (network) layer
     m_appLink->onReceiveInterest(*interest);
+  } else {
+    setWaitingForData(false);
   }
 
   ScheduleNextPacket();
 }
 
+Vector
+RepeatingConsumer::getPosition() {
+  Ptr<MobilityModel> mobility = GetNode()->GetObject<MobilityModel>();
+  return mobility->GetPosition();
+}
+
 bool
-RepeatingConsumer::canSendInterest(double x, double y) {
+RepeatingConsumer::canCommunicate(double x, double y) {
+  NS_LOG_DEBUG ("checking position x: " << x << " y: " << y);
   if(x < 50 || x > 950) {
     return false;
   } else if(y < 50 || y > 750) {
@@ -173,35 +177,50 @@ RepeatingConsumer::canSendInterest(double x, double y) {
 }
 
 void
+RepeatingConsumer::setWaitingForData(bool isWaiting) {
+  m_waitingForData = isWaiting;
+}
+
+void
 RepeatingConsumer::OnData(std::shared_ptr<const ndn::Data> data)
 {
   NS_LOG_FUNCTION_NOARGS();
 
-  App::OnData(data);
   NS_LOG_DEBUG("<< D: " << data->getName() << " freshness=" << static_cast<ndn::time::milliseconds>(data->getFreshnessPeriod()) << " pushed=" << data->getPushed());
 
-  int hopCount = 0;
-  auto hopCountTag = data->getTag<ndn::lp::HopCountTag>();
-  if (hopCountTag != nullptr) { // e.g., packet came from local node's cache
-    hopCount = *hopCountTag;
+  // Is the node outside of the communication zone?
+  Vector currentPosition = getPosition();
+  double x = currentPosition.x;
+  double y = currentPosition.y;
+
+
+  if(canCommunicate(x, y)) {
+    App::OnData(data);
+    NS_LOG_DEBUG ("Logging data packet Position x: " << x << " Position y: " << y);
+    int hopCount = 0;
+    auto hopCountTag = data->getTag<ndn::lp::HopCountTag>();
+    if (hopCountTag != nullptr) { // packet came from local node's cache
+      hopCount = *hopCountTag;
+    } else {
+      NS_LOG_DEBUG("Packet coming from local cache");
+    }
+
+    if(m_waitingForData) {
+      m_lastRetransmittedInterestDataDelay(this, 1, Simulator::Now() - m_lastInterestSentTime, hopCount);
+      NS_LOG_DEBUG ("logging last packet delay, delay=" << (Simulator::Now() - m_lastInterestSentTime));
+      m_waitingForData = false;
+    }
+
+    if(data->getPushed()) {
+      NS_LOG_DEBUG("Forwarding data " << data->getName() << " pushed=" << data->getPushed());
+
+      data->wireEncode();
+
+      m_transmittedDatas(data, this, m_face);
+      m_appLink->onReceiveData(*data);
+    }
   } else {
-    NS_LOG_DEBUG("Packet coming from local cache"); // not sure this is true
-  }
-
-  // If the data is pushed then the node should attempt to forward the data once again
-  if(data->getPushed()) {
-    NS_LOG_DEBUG("Forwarding data " << data->getName() << " pushed=" << data->getPushed());
-
-    data->wireEncode();
-
-    m_transmittedDatas(data, this, m_face);
-    m_appLink->onReceiveData(*data);
-  }
-
-  if(m_waitingForData) {
-    m_lastRetransmittedInterestDataDelay(this, 1, Simulator::Now() - m_lastInterestSentTime, hopCount);
-    NS_LOG_DEBUG ("logging last packet delay, delay=" << (Simulator::Now() - m_lastInterestSentTime));
-    m_waitingForData = false;
+    setWaitingForData(false);
   }
 }
 
