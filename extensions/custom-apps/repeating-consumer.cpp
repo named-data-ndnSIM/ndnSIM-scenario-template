@@ -16,10 +16,13 @@
 
 #include "ndn-cxx/util/time.hpp"
 #include <ndn-cxx/lp/tags.hpp>
+#include "model/ndn-l3-protocol.hpp"
+#include "helper/ndn-fib-helper.hpp"
 
 NS_LOG_COMPONENT_DEFINE("RepeatingConsumer");
 
 namespace ns3 {
+namespace ndn {
 
 NS_OBJECT_ENSURE_REGISTERED(RepeatingConsumer);
 
@@ -60,8 +63,22 @@ RepeatingConsumer::StartApplication()
 
   // initialize ndn::App
   ndn::App::StartApplication();
+
+  // route to the application interface
+  ndn::FibHelper::AddRoute(GetNode(), m_name, m_face, 0);
+
+  // step 1: get net device of this node...
+  Ptr<NetDevice> device = GetNode()->GetDevice(0);
+
+  // step 2: get face from net device...
+  shared_ptr<ndn::Face> m_broadcastFace = GetNode()->GetObject<ndn::L3Protocol>()->getFaceByNetDevice(device);
+
+  // step 3: add net device to push data out of to FIB
+  ndn::FibHelper::AddRoute(GetNode(), m_name, m_broadcastFace, 0);
+
   SetRandomize();
   m_isRunning = true;
+  m_waitingForData = false;
   ScheduleNextPacket();
 }
 
@@ -70,7 +87,7 @@ RepeatingConsumer::ScheduleNextPacket()
 {
   NS_LOG_FUNCTION_NOARGS();
 
-  // NS_LOG_DEBUG ("m_sendEvent: " << m_sendEvent.IsRunning());
+  NS_LOG_DEBUG ("m_sendEvent: " << m_sendEvent.IsRunning());
   if (m_firstTime) {
     m_sendEvent = Simulator::Schedule(Seconds(m_random->GetValue()),
                                       &RepeatingConsumer::SendInterest, this);
@@ -87,7 +104,7 @@ RepeatingConsumer::SetRandomize()
 
   m_random = CreateObject<UniformRandomVariable>();
   m_random->SetAttribute("Min", DoubleValue(0.0));
-  m_random->SetAttribute("Max", DoubleValue(2 * 1.0 / m_frequency));
+  m_random->SetAttribute("Max", DoubleValue(1.0));
 }
 
 // Processing when application is stopped
@@ -110,43 +127,46 @@ RepeatingConsumer::SendInterest()
   if (!m_isRunning)
     return;
 
-  /////////////////////////////////////
-  // Sending one Interest packet out //
-  /////////////////////////////////////
-
   // Create check for vehicle coordinates... If nodes is outside defined communication range then skip sending interest.
-  Ptr<MobilityModel> mobility = GetNode()->GetObject<MobilityModel>();
-  Vector currentPosition = mobility->GetPosition();
+  Vector currentPosition = getPosition();
   double x = currentPosition.x;
   double y = currentPosition.y;
-  std::cout << "x position: " << currentPosition.x << "y position " << currentPosition.y << "\n";
 
-  if (canSendInterest(x, y)) {
+  if (canCommunicate(x, y)) {
     auto interest = std::make_shared<ndn::Interest>(m_name);
     Ptr<UniformRandomVariable> rand = CreateObject<UniformRandomVariable>();
     interest->setNonce(rand->GetValue(0, std::numeric_limits<uint32_t>::max()));
-    interest->setInterestLifetime(ndn::time::seconds(1));
+    interest->setInterestLifetime(ndn::time::seconds(2));
     interest->setMustBeFresh(true);
 
-    // NS_LOG_DEBUG("Sending Interest packet for " << m_name);
+    if (!m_waitingForData) {
+      setWaitingForData(true);
+      m_lastInterestSentTime = Simulator::Now();
+    }
 
-    m_waitingForData = true;
-    m_lastInterestSentTime = Simulator::Now();
-
-    // Call trace (for logging purposes)
+    // ndn::App tracing for interest
     m_transmittedInterests(interest, this, m_face);
 
     NS_LOG_DEBUG(">> I: " << m_name);
 
     // Forward packet to lower (network) layer
     m_appLink->onReceiveInterest(*interest);
+  } else {
+    setWaitingForData(false);
   }
 
   ScheduleNextPacket();
 }
 
+Vector
+RepeatingConsumer::getPosition() {
+  Ptr<MobilityModel> mobility = GetNode()->GetObject<MobilityModel>();
+  return mobility->GetPosition();
+}
+
 bool
-RepeatingConsumer::canSendInterest(double x, double y) {
+RepeatingConsumer::canCommunicate(double x, double y) {
+  NS_LOG_DEBUG ("checking position x: " << x << " y: " << y);
   if(x < 50 || x > 950) {
     return false;
   } else if(y < 50 || y > 750) {
@@ -157,23 +177,51 @@ RepeatingConsumer::canSendInterest(double x, double y) {
 }
 
 void
+RepeatingConsumer::setWaitingForData(bool isWaiting) {
+  m_waitingForData = isWaiting;
+}
+
+void
 RepeatingConsumer::OnData(std::shared_ptr<const ndn::Data> data)
 {
   NS_LOG_FUNCTION_NOARGS();
 
-  App::OnData(data);
   NS_LOG_DEBUG("<< D: " << data->getName() << " freshness=" << static_cast<ndn::time::milliseconds>(data->getFreshnessPeriod()) << " pushed=" << data->getPushed());
 
-  int hopCount = 0;
-  auto hopCountTag = data->getTag<ndn::lp::HopCountTag>();
-  if (hopCountTag != nullptr) { // e.g., packet came from local node's cache
-    hopCount = *hopCountTag;
-  } else {
-    NS_LOG_DEBUG("Packet coming from local cache"); // not sure this is true
-  }
+  // Is the node outside of the communication zone?
+  Vector currentPosition = getPosition();
+  double x = currentPosition.x;
+  double y = currentPosition.y;
 
-  m_lastRetransmittedInterestDataDelay(this, 1, Simulator::Now() - m_lastInterestSentTime, hopCount);
-  NS_LOG_DEBUG ("logging last packet delay, delay=" << (Simulator::Now() - m_lastInterestSentTime));
+
+  if(canCommunicate(x, y)) {
+    App::OnData(data);
+    NS_LOG_DEBUG ("Logging data packet Position x: " << x << " Position y: " << y);
+    int hopCount = 0;
+    auto hopCountTag = data->getTag<ndn::lp::HopCountTag>();
+    if (hopCountTag != nullptr) { // packet came from local node's cache
+      hopCount = *hopCountTag;
+    } else {
+      NS_LOG_DEBUG("Packet coming from local cache");
+    }
+
+    if(m_waitingForData) {
+      m_lastRetransmittedInterestDataDelay(this, 1, Simulator::Now() - m_lastInterestSentTime, hopCount);
+      NS_LOG_DEBUG ("logging last packet delay, delay=" << (Simulator::Now() - m_lastInterestSentTime));
+      m_waitingForData = false;
+    }
+
+    if(data->getPushed()) {
+      NS_LOG_DEBUG("Forwarding data " << data->getName() << " pushed=" << data->getPushed());
+
+      data->wireEncode();
+
+      m_transmittedDatas(data, this, m_face);
+      m_appLink->onReceiveData(*data);
+    }
+  } else {
+    setWaitingForData(false);
+  }
 }
 
 void
@@ -188,4 +236,5 @@ RepeatingConsumer::OnNack(std::shared_ptr<const ndn::lp::Nack> nack)
               << ", reason: " << nack->getReason());
 }
 
+} // namespace ndn
 } // namespace ns3

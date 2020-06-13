@@ -26,9 +26,10 @@
 #include "ns3/nstime.h"
 #include "ns3/ndnSIM/apps/ndn-app.hpp"
 #include "ns3/random-variable-stream.h"
+#include "ns3/core-module.h"
 
 namespace ns3 {
-
+namespace ndn {
 /**
  * @brief A dumb requester application
  *
@@ -56,7 +57,13 @@ public:
 
   // Nodes sitting at the edge should not communicate and this check is used to implement that behaviour
   virtual bool
-  canSendInterest(double x, double y);
+  canCommunicate(double x, double y);
+
+  virtual Vector
+  getPosition();
+
+  virtual void
+  setWaitingForData(bool isWaiting);
 
   // (overridden from ndn::App) Callback that will be called when NACK arrives
   virtual void
@@ -86,11 +93,12 @@ private:
   Ptr<RandomVariableStream> m_random;
 
   /// @cond include_hidden
-  TracedCallback<Ptr<App> /* app */, uint32_t /* cache hit? */, Time /* delay */, int32_t /*hop count*/>
+  TracedCallback<Ptr<App> /* app */, uint32_t /* seq No. */, Time /* delay */, int32_t /*hop count*/>
     m_lastRetransmittedInterestDataDelay;
   /// @endcond
 };
 
+} // namespace ndn
 } // namespace ns3
 
 #endif

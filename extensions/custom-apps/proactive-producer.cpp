@@ -97,6 +97,7 @@ ProactiveProducer::OnInterest(shared_ptr<const Interest> interest)
   App::OnInterest(interest); // tracing inside
 
   NS_LOG_FUNCTION(this << interest);
+  NS_LOG_DEBUG("Received interest: " << interest->getName());
 
   if (!m_active)
     return;
@@ -132,6 +133,7 @@ ProactiveProducer::SendData(Name dataName, bool pushed)
 
   data->setSignature(signature);
 
+  NS_LOG_INFO("node(" << GetNode()->GetId() << ") responding with Data: " << data->getName());
   NS_LOG_DEBUG("Data=" << data->getName() << " face=" << m_face->getId() << " pushed=" << data->getPushed());
 
   // to create real wire encoding
@@ -141,7 +143,9 @@ ProactiveProducer::SendData(Name dataName, bool pushed)
   m_transmittedDatas(data, this, m_face);
   m_appLink->onReceiveData(*data); 
 
-  ScheduleNextPacket();
+  if(pushed) {
+    ScheduleNextPacket();
+  }
 }
 
 void

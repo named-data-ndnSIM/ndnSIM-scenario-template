@@ -30,7 +30,8 @@ main(int argc, char* argv[])
   std::string range = "100"; // desired transmission range for the signal
   double range_d = 3.0;
   std::string payloadSize = "600";
-  double frequency = .1;
+  double frequency = 1;
+  double freshness = frequency*1000;
   int nodeNum;
 
   // Read optional command-line parameters (e.g., enable visualizer with ./waf --run=<> --visualize
@@ -71,7 +72,7 @@ main(int argc, char* argv[])
 
   if(!boost::filesystem::create_directory(dir))
   {
-    dir = "./graphs/data/";
+    // dir = "./graphs/data/"; awful code
   }
 
   // Creating nodes
@@ -79,12 +80,6 @@ main(int argc, char* argv[])
   consumerNodes.Create(nodeNum);
   NodeContainer producerNodes;
   producerNodes.Create(1);
-
-  // testing configuration
-  // NodeContainer consumerNodes;
-  // consumerNodes.Create(1);
-  // NodeContainer producerNodes;
-  // producerNodes.Create(1);
 
   if (range == "200") {
     std::cout << range << "\n";
@@ -125,8 +120,6 @@ main(int argc, char* argv[])
   wifiPhy.SetPcapDataLinkType (WifiPhyHelper::DLT_IEEE802_11);
   wifiPhy.SetChannel (wifiChannel.Create ());
 
-  // ADD REMOTE MANAGER!!!
-
   NqosWaveMacHelper wifi80211pMac = NqosWaveMacHelper::Default ();
   Wifi80211pHelper wifi80211p = Wifi80211pHelper::Default ();
 
@@ -140,21 +133,12 @@ main(int argc, char* argv[])
   // Install Ndn stack on all nodes
   ndn::StackHelper ndnHelper;
   ndnHelper.SetDefaultRoutes(true);
-
-  // new cache
-  // ndnHelper.setCsSize(2); // allow just 2 entries to be cached
-  // ndnHelper.setPolicy("nfd::cs::lru");
   ndnHelper.SetOldContentStore("ns3::ndn::cs::Freshness::Lru","MaxSize", "100"); // Old content store so that cache hit tracing can be used
-  ndnHelper.Install(consumerNodes);
-
-  ndnHelper.SetOldContentStore("ns3::ndn::cs::Nocache");
-  ndnHelper.Install(producerNodes);
+  ndnHelper.InstallAll();
 
   // Installing applications
-
   // Consumer
   ndn::AppHelper consumerHelper("RepeatingConsumer");
-
   consumerHelper.SetPrefix("/cam");
   consumerHelper.SetAttribute("Frequency", DoubleValue(frequency));
   consumerHelper.Install(consumerNodes);
@@ -163,7 +147,7 @@ main(int argc, char* argv[])
 
   // ndn::AppHelper producerHelper("ns3::ndn::Producer");
   // producerHelper.SetAttribute("PayloadSize", StringValue("600"));
-  // producerHelper.SetAttribute("Freshness", TimeValue(MilliSeconds(frequency*1000)));
+  // producerHelper.SetAttribute("Freshness", TimeValue(MilliSeconds(freshness)));
   // producerHelper.SetPrefix("/cam");
   // producerHelper.Install(producerNodes);
 
@@ -171,7 +155,7 @@ main(int argc, char* argv[])
 
   ndn::AppHelper producerHelper("ns3::ndn::ProactiveProducer");
   producerHelper.SetAttribute("PayloadSize", StringValue("600"));
-  producerHelper.SetAttribute("Freshness", TimeValue(MilliSeconds(frequency*1000)));
+  producerHelper.SetAttribute("Freshness", TimeValue(MilliSeconds(freshness)));
   producerHelper.SetAttribute("Frequency", DoubleValue(frequency));
   producerHelper.SetPrefix("/cam");
   producerHelper.Install(producerNodes);
