@@ -139,10 +139,8 @@ RepeatingConsumer::SendInterest()
     interest->setInterestLifetime(ndn::time::seconds(2));
     interest->setMustBeFresh(true);
 
-    if (!m_waitingForData) {
-      setWaitingForData(true);
-      m_lastInterestSentTime = Simulator::Now();
-    }
+    setWaitingForData(true);
+    m_lastInterestSentTime = Simulator::Now();
 
     // ndn::App tracing for interest
     m_transmittedInterests(interest, this, m_face);
