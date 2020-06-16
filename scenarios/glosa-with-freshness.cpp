@@ -101,18 +101,11 @@ main(int argc, char* argv[])
     range_d = 2.1;
   }
 
+  std::cout << range << "m\n";
+
   // Mobility for vehicles comes from traceFile
   ns2Mobility.Install();
 
-  // testing configuration
-  // MobilityHelper testMobility;
-  // Ptr<ListPositionAllocator> testAlloc = CreateObject<ListPositionAllocator> ();
-  // testAlloc->Add(Vector (500.0, 415.0, 0.0));
-  // testMobility.SetPositionAllocator (testAlloc);
-  // testMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
-  // testMobility.Install(consumerNodes);
-
-  // Mobility for traffic light is a fixed position ~intersection of nodes
   MobilityHelper trafficLightMobility;
   Ptr<ListPositionAllocator> posAlloc = CreateObject<ListPositionAllocator> ();
   posAlloc->Add(Vector (2010.0, 2010.0, 0.0));
@@ -152,20 +145,20 @@ main(int argc, char* argv[])
 
   // ** normal producer **
 
-  // ndn::AppHelper producerHelper("ns3::ndn::Producer");
-  // producerHelper.SetAttribute("PayloadSize", StringValue("600"));
-  // producerHelper.SetAttribute("Freshness", TimeValue(MilliSeconds(freshness)));
-  // producerHelper.SetPrefix("/cam");
-  // producerHelper.Install(producerNodes);
+  ndn::AppHelper producerHelper("ns3::ndn::Producer");
+  producerHelper.SetAttribute("PayloadSize", StringValue("600"));
+  producerHelper.SetAttribute("Freshness", TimeValue(MilliSeconds(freshness)));
+  producerHelper.SetPrefix("/cam");
+  producerHelper.Install(producerNodes);
 
   // ** proactive producer **
 
-  ndn::AppHelper producerHelper("ns3::ndn::ProactiveProducer");
-  producerHelper.SetAttribute("PayloadSize", StringValue("600"));
-  producerHelper.SetAttribute("Freshness", TimeValue(MilliSeconds(freshness)));
-  producerHelper.SetAttribute("Frequency", DoubleValue(frequency));
-  producerHelper.SetPrefix("/cam");
-  producerHelper.Install(producerNodes);
+  // ndn::AppHelper producerHelper("ns3::ndn::ProactiveProducer");
+  // producerHelper.SetAttribute("PayloadSize", StringValue("600"));
+  // producerHelper.SetAttribute("Freshness", TimeValue(MilliSeconds(freshness)));
+  // producerHelper.SetAttribute("Frequency", DoubleValue(frequency));
+  // producerHelper.SetPrefix("/cam");
+  // producerHelper.Install(producerNodes);
 
   Simulator::Stop(Seconds(350.0));
 
