@@ -1,106 +1,14 @@
 rm(list = ls())
-setwd("~/workspace/github.com/ChrisLynch96/masters-project/scenario-template/graphs")
+setwd("~/workspace/github.com/ChrisLynch96/masters-project/transient-periodic-information-dissemination-in-VNDN/graphs")
 
 library(tidyverse) # collection of packages for every day data science (ggplot2, dplyr, tidyr, readr, purrr, tibble, stringr, forcats)
 library(RColorBrewer) # package for choosing sensible colours for plots
 library(plotly) # package for making production ready plots (should use this for plotting me thinks)
 library(lubridate) # package for data and time
-library(caret) # machinelearning
 library(tidytext) # Package for conversion of text to
-library(spacyr)
-library(zoo)
-# Chord diagram
-library(circlize)
-library(gridExtra)
 
-#theme
-my_theme <- function(base_size = 12, base_family = "Helvetica"){
-  theme(axis.title.y = element_blank(),axis.title.x = element_blank(),
-        plot.title = element_text(face="bold", size=16),
-        axis.text = element_text(face="bold"),
-        plot.background = element_rect(fill = 'snow2',color='white'),
-        strip.text.y = element_text(angle=180),
-        legend.position = 'None', legend.title = element_blank())
-}
+# functions
 
-## functions and vars
-
-group.colours <- c("pure-ndn_1s" = "#F88077", "unsolicited_1s" = "#19C034", "proactive_1s" = "#6AA9FF", "proactive_forwarding_1s" = "#b37ff0", "pure-ndn_100ms" = "#f5493d", "unsolicited_100ms" = "#0f711f", "proactive_100ms" = "#1a79ff", "proactive_forwarding_100ms" = "#8934eb")
-disseminationMethods <- c("pure-ndn_1s", "unsolicited_1s", "proactive_1s", "proactive_with_forwarding_1s", "pure-ndn_100ms", "unsolicited_100ms", "proactive_100ms", "proactive_with_forwarding_100ms")
-traceFiles <- c("rate-trace.txt", "app-delays-trace.txt", "cs-trace.txt") # This should really be some form of enum
-directories <- get_directories()
-
-plot_packet_all_total <- function(disseminationMethod, dir) {
-  
-  data.packets <- read.table(str_c("./data/", disseminationMethod, "/", dir, "/rate-trace.txt"), header=T)
-  
-  clean_rate_frame(data.packets)
-  data.packets = data.packets[c("Time", "Node", "PacketRaw")]
-  
-  data.packets.nodes = aggregate(PacketRaw ~ Time + Node, data=data.packets, FUN=sum)
-  data.packets.total = aggregate(PacketRaw ~ Time, data=data.packets.nodes, FUN=sum)
-  
-  g.packets.total <- ggplot(data = data.packets.total, aes (x=Time, y=PacketRaw), size=1) +
-    geom_line() +
-    geom_point() +
-    ggtitle(dir) +
-    ylab("Packet Numbers") +
-    theme_light()
-}
-
-plot_packet_all_total2 <- function(dir) {
-  data.combined <- combine_methods_packet(dir)
-  
-  data.combined <- clean_rate_frame(data.combined)
-  data.combined = data.combined[c("Time", "Node", "PacketRaw", "method")]
-  
-  data.combined.nodes = aggregate(PacketRaw ~ Time + Node + method, data=data.combined, FUN=sum)
-  data.combined.total = aggregate(PacketRaw ~ Time + method, data=data.combined.nodes, FUN=sum)
-  
-  g.packets.total <- ggplot(data = data.combined.total, aes (x=Time, y=PacketRaw, group=method, colour=method, shape=method), size=1) +
-    geom_line() +
-    geom_point() +
-    ggtitle(dir) +
-    ylab("Packet Numbers") +
-    theme_light()
-}
-
-plot_packet_all_box <- function(dir) {
-  data.combined <- combine_methods_packet(dir)
-  
-  data.combined <- clean_rate_frame(data.combined)
-  data.combined = data.combined[c("Time", "Node", "PacketRaw", "method")]
-  
-  data.combined.nodes = aggregate(PacketRaw ~ Time + Node + method, data=data.combined, FUN=sum)
-  data.combined.total = aggregate(PacketRaw ~ Time + method, data=data.combined.nodes, FUN=sum)
-  
-  group.colours <- c("pure-ndn_1s" = "#F88077", "unsolicited_1s" = "#19C034", "proactive_1s" = "#6AA9FF", "proactive_forwarding_1s" = "#8934eb", "pure-ndn_100ms" = "#f5493d", "unsolicited_100ms" = "#0f711f", "proactive_100ms" = "#1a79ff", "proactive_forwarding_100ms" = "#b37ff0")
-  
-  g.packets.total.box <- ggplot(data = data.combined.total, aes(x=method, y=PacketRaw, fill=method)) +
-    geom_boxplot() +
-    ggtitle(dir) +
-    xlab("Method") +
-    ylab("Packet Numbers") +
-    scale_fill_manual(values=group.colours) +
-    theme_light() +
-    theme(axis.text.x = element_blank())
-}
-
-plot_delay_all_total2 <- function(dir) {
-  data.delay <- combine_methods_packet(dir, delay = TRUE)
-  
-  ## Data processing
-  data.delay.filtered <- data.delay[c("Time", "Type", "DelayS", "method")]
-  data.delay.filtered <- transform(data.delay.filtered, DelayMS = DelayS * 1000)
-  
-  g.last.delay <- ggplot(data.delay.filtered, aes (x=Time, y=DelayMS, group=method, colour=method, shape=method), size=1) +
-    geom_smooth(se=FALSE, method="loess", span=0.1) +
-    ggtitle(dir) +
-    ylab("Delay (ms)") +
-    theme_light()
-}
-
-## packets in the network ##
 grouped_barcharts_packets <- function(all.packets) {
   
   options(scipen=999)
@@ -296,18 +204,19 @@ get_directories <- function() {
   list.dirs(path = str_c("./data/pure-ndn_1s"), full.names = FALSE, recursive = FALSE)
 }
 
-combine_all_data <- function(directories, traceFile) {
-  data.list <- lapply(directories, combine_methods_by_directory, traceFile)
+combine_and_clean_all_data <- function(directories, traceFile, time) {
+  data.list <- lapply(directories, combine_methods_by_directory, traceFile, time)
   data.combined <- bind_rows(data.list)
   data.combined <- coerce_to_factor(data.combined, c("method", "density", "speed", "range"))
+  data.combined$density <- convert_vehicles_to_percentages(data.combined$density) # coupled by the calling orded (requires that they be a factor first)
+  data.combined <- correct_order_of_factors(data.combined)
+  
   return(data.combined)
 }
 
-combine_methods_by_directory <- function(dir, traceFile) {
-  
-  methods.list <- lapply(disseminationMethods, read_and_append_method, dir, traceFile)
+combine_methods_by_directory <- function(dir, traceFile, time) {
+  methods.list <- lapply(disseminationMethods, read_and_append_method, dir, traceFile, time)
   data.combined <- bind_rows(methods.list)
-  data.combined$method <- as.factor(data.combined$method)
   components <- str_split(dir, "-")[[1]]
   density <- components[2]
   speed <- components[3]
@@ -319,9 +228,18 @@ combine_methods_by_directory <- function(dir, traceFile) {
   return(data.combined)
 }
 
-read_and_append_method <- function(disseminationMethod, dir, traceFile) {
+# side-effects
+read_and_append_method <- function(disseminationMethod, dir, traceFile, time) {
+  # read the data in
   data <- read.table(str_c("./data/", disseminationMethod, "/", dir, "/", traceFile), header=T)
+  
+  # clean the data as much as possible
   data['method'] = disseminationMethod
+  data <- subset_by_time(data, time)
+  
+  if (traceFile == "rate-trace.txt") {
+    data <- clean_rate_frame(data)
+  }
   return(data)
 }
 
@@ -372,10 +290,10 @@ convert_vehicles_to_percentages <- function(density) {
 
 correct_order_of_factors <- function(data.frame) {
   # Requires implicit knowledge about the factors and levels being used and the order of the levels...
-  data.frame$method <- factor(data.frame$method, levels=c("pure-ndn_1s", "pure-ndn_100ms", "unsolicited_1s", "unsolicited_100ms", "proactive_1s", "proactive_100ms", "proactive_forwarding_1s", "proactive_forwarding_100ms"))
+  data.frame$method <- factor(data.frame$method, levels=c("pure-ndn_1s", "pure-ndn_100ms", "unsolicited_1s", "unsolicited_100ms", "proactive_1s", "proactive_100ms", "proactive_and_unsolicited_1s", "proactive_and_unsolicited_100ms"))
   data.frame$density <- factor(data.frame$density, levels=c("15%", "50%", "100%"))
   data.frame$speed <- factor(data.frame$speed, levels=c("30kmh", "60kmh", "100kmh"))
-  data.frame$range <- factor(data.frame$range, levels=c("100", "200", "300"))
+  data.frame$range <- factor(data.frame$range, levels=c("300m", "500m", "700m"))
   
   return(data.frame)
 }
@@ -392,32 +310,6 @@ convert_to_tidy_cache_format <- function(untidy.frame) {
   
   cache.frame <- cbind(cache.hits, CacheMisses = cache.misses$CacheMisses)
   cache.frame <- cache.frame[c("Time", "Node", "density", "speed", "range", "CacheHits", "CacheMisses", "method")]
-}
-
-plot_cache_over_time <- function(dir, node1, node2) {
-  data.ndn <- read.table(str_c("./data/misc/", dir, "/cs-trace.txt"), header=T)
-  
-  components <- str_split(dir, "-")[[1]]
-  method <- "pure-ndn"
-  density <- components[2]
-  speed <- components[3]
-  tRange <- components[4]
-  data.ndn <- transform(data.ndn, method = method)
-  data.ndn <- transform(data.ndn, density = density)
-  data.ndn <- transform(data.ndn, speed = speed)
-  data.ndn <- transform(data.ndn, range = tRange)
-  
-  data.ndn <- convert_to_tidy_cache_format(data.ndn)
-  
-  ## get the just the node IDs that I'm interested in
-  data.ndn <- subset(data.ndn, Node == '5' | Node == '46')
-  data.ndn$Node <- as.factor(data.ndn$Node)
-  
-  plot <- ggplot(data.ndn, aes(x=Time, y=CacheHits, group=Node, colour=Node))  + 
-    geom_line() +
-    xlab("Time") +
-    ylab("Cache Hits") +
-    theme_light()
 }
 
 aggregate_producer_packets <- function(directories) {
@@ -480,10 +372,6 @@ aggregate_producer_packets_by_density <- function(directories) {
   return(all.packets)
 }
 
-plot_packets <- function(data.frame) {
-  
-}
-
 get_packets_at_producer <- function(data.packets) {
   producerNodeId <- get_producer_node_ID(data.packets)
   producer.frame <- get_data_frame_from_node_id(data.packets, producerNodeId)
@@ -525,63 +413,62 @@ plot_packet_method <- function(data.frame, title) {
     scale_fill_manual(values=group.colours)
   return(plot)
 }
+
+generate_packets_delay_cache_pdf <- function(packet.frame, delay.frame, cache.frame, pdf_title) {
+  pdf(pdf_title)
+  
+  plot.list <- grouped_barcharts_packets(packet.frame)
+  
+  for(i in 1:length(plot.list)) {
+    print(plot.list[[i]])
+  }
+  
+  plot.list <- grouped_barcharts_delay(delay.frame)
+  
+  for(i in 1:length(plot.list)) {
+    print(plot.list[[i]])
+  }
+  
+  plot.list <- grouped_barcharts_cache(cache.frame)
+  
+  for(i in 1:length(plot.list)) {
+    print(plot.list[[i]])
+  }
+  
+  dev.off()
+}
+
 ## MAIN: playground to generate various pdfs ##
 
 #setting up data.frames
 
-all.packets <- combine_all_data(directories = directories, traceFile = traceFiles[1])
-all.delay <- combine_all_data(directories = directories, traceFile = traceFiles[2])
-all.cache <- combine_all_data(directories = directories, traceFile = traceFiles[3])
+group.colours <- c("pure-ndn_1s" = "#F88077", "unsolicited_1s" = "#19C034", "proactive_1s" = "#6AA9FF", "proactive_and_unsolicited_1s" = "#b37ff0", "pure-ndn_100ms" = "#f5493d", "unsolicited_100ms" = "#0f711f", "proactive_100ms" = "#1a79ff", "proactive_and_unsolicited_100ms" = "#8934eb")
+#disseminationMethods <- c("pure-ndn_1s", "unsolicited_1s", "proactive_1s", "proactive_and_unsolicited_1s", "pure-ndn_100ms", "unsolicited_100ms", "proactive_100ms", "proactive_and_unsolicited_100ms")
+disseminationMethods <- c("pure-ndn_1s", "unsolicited_1s", "proactive_1s", "proactive_and_unsolicited_1s")
+traceFiles <- c("rate-trace.txt", "app-delays-trace.txt", "cs-trace.txt") # This should really be some form of enum
+directories <- get_directories()
 
-all.packets <- subset_by_time(all.packets, 60)
-all.delay <- subset_by_time(all.delay, 60)
-all.cache <- subset_by_time(all.cache, 60)
-
-all.packets$density <- convert_vehicles_to_percentages(all.packets$density)
-all.delay$density <- convert_vehicles_to_percentages(all.delay$density)
-all.cache$density <- convert_vehicles_to_percentages(all.cache$density)
-
-all.packets <- correct_order_of_factors(all.packets)
-all.delay <- correct_order_of_factors(all.delay)
-all.cache <- correct_order_of_factors(all.cache)
+lead_time <- 60
+all.packets <- combine_and_clean_all_data(directories = directories, traceFile = traceFiles[1], lead_time)
+all.delay <- combine_and_clean_all_data(directories = directories, traceFile = traceFiles[2], lead_time)
+all.cache <- combine_and_clean_all_data(directories = directories, traceFile = traceFiles[3], lead_time)
 
 all.cache <- convert_to_tidy_cache_format(all.cache)
 
-all.packets.1s <- subset(all.packets, method == 'pure-ndn_1s' | method == 'unsolicited_1s' | method == 'proactive_1s' | method == 'proactive_forwarding_1s')
-all.delay.1s <- subset(all.delay, method == 'pure-ndn_1s' | method == 'unsolicited_1s' | method == 'proactive_1s' | method == 'proactive_forwarding_1s')
-all.cache.1s <- subset(all.cache, method == 'pure-ndn_1s' | method == 'unsolicited_1s' | method == 'proactive_1s'| method == 'proactive_forwarding_1s')
+one_second_methods <- c("pure-ndn_1s", "unsolicited_1s", "proactive_1s", "proactive_and_unsolicited_1s")
+one_hundred_millisecond_methods <- c("pure-ndn_100ms", "unsolicited_100ms", "proactive_100ms", "proactive_and_unsolicited_100ms")
 
-all.packets.100ms <- subset(all.packets, method == 'pure-ndn_100ms' | method == 'unsolicited_100ms' | method == 'proactive_100ms', method == 'proactive_forwarding_100ms')
-all.delay.100ms <- subset(all.delay, method == 'pure-ndn_100ms' | method == 'unsolicited_100ms' | method == 'proactive_100ms' | method == 'proactive_forwarding_100ms')
-all.cache.100ms <- subset(all.cache, method == 'pure-ndn_100ms' | method == 'unsolicited_100ms' | method == 'proactive_100ms' | method == 'proactive_forwarding_100ms')
+all.packets.1s <- dplyr::filter(all.packets, method %in% one_second_methods)
+all.delay.1s <- dplyr::filter(all.delay, method %in% one_second_methods)
+all.cache.1s <- dplyr::filter(all.cache, method %in% one_second_methods)
 
-#################################
-# All packets bar charts        #
-#################################
-pdf("plots-with-forwarding.pdf")
-## Packet Number bar charts
-plot.list <- grouped_barcharts_packets(all.packets)
+all.packets.100ms <- dplyr::filter(all.packets, method %in% one_hundred_millisecond_methods)
+all.delay.100ms <- dplyr::filter(all.delay, method %in% one_hundred_millisecond_methods)
+all.cache.100ms <- dplyr::filter(all.cache, method %in% one_hundred_millisecond_methods)
 
-for(i in 1:length(plot.list)) {
-  print(plot.list[[i]])
-}
-
-## delay bar charts
-plot.list <- grouped_barcharts_delay(all.delay)
-
-for(i in 1:length(plot.list)) {
-  print(plot.list[[i]])
-}
-
-## cache hit ratio bar charts
-plot.list <- grouped_barcharts_cache(all.cache)
-
-for(i in 1:length(plot.list)) {
-  print(plot.list[[i]])
-}
-
-dev.off()
-#################################
+generate_packets_delay_cache_pdf(all.packets, all.delay, all.cache, "plots_with_forwarding.pdf")
+generate_packets_delay_cache_pdf(all.packets.1s, all.delay.1s, all.cache.1s, "plots_with_forwarding_1s.pdf")
+generate_packets_delay_cache_pdf(all.packets.100ms, all.delay.1s, all.delay.100ms, "plots_with_forwarding_100ms.pdf")
 
 ## producer packets
 producerByDensity.packets <- aggregate_producer_packets_by_density(directories)
@@ -630,35 +517,3 @@ for(i in 1:length(plot.list)) {
 
 dev.off()
 #################################
-
-pdf("congestion-boxplots.pdf")
-## packet numbers vs method
-for (i in 1:length(directories)) {
-  dir <- directories[i]
-  fig <- plot_packet_all_box(dir)
-  print(fig)
-}
-dev.off()
-
-
-## Delay vs method
-for(i in 1:length(directories)) {
-  dir <- directories[i]
-  fig <- plot_delay_all_total2(dir)
-  print(fig)
-}
-
-## speed
-for(method in disseminationMethods) {
-  plot_speeds_packets(method)
-}
-
-## density
-for(method in disseminationMethods) {
-  plot_density_packets(method)
-}
-
-## distance
-for(method in disseminationMethods) {
-  plot_distance_packets(method)
-}
