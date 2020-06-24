@@ -44,7 +44,12 @@ RepeatingConsumer::GetTypeId()
       .AddTraceSource("LastRetransmittedInterestDataDelay",
                       "Delay between last retransmitted Interest and received Data",
                       MakeTraceSourceAccessor(&RepeatingConsumer::m_lastRetransmittedInterestDataDelay),
-                      "ns3::ndn::RepeatingConsumer::LastRetransmittedInterestDataDelayCallback");
+                      "ns3::ndn::RepeatingConsumer::LastRetransmittedInterestDataDelayCallback")
+      
+      .AddTraceSource("FirstInterestDataDelay",
+                      "Delay between first transmitted Interest and received Data",
+                      MakeTraceSourceAccessor(&RepeatingConsumer::m_firstInterestDataDelay),
+                      "ns3::ndn::RepeatingConsumer::FirstInterestDataDelayCallback");
   return tid;
 }
 
@@ -139,7 +144,14 @@ RepeatingConsumer::SendInterest()
     interest->setInterestLifetime(ndn::time::seconds(2));
     interest->setMustBeFresh(true);
 
-    setWaitingForData(true);
+    if (!m_waitingForData) {
+      setWaitingForData(true);
+      m_firstInterestSentTime = Simulator::Now();
+      m_retxCount = 0;
+    } else {
+      m_retxCount++;
+    }
+
     m_lastInterestSentTime = Simulator::Now();
 
     // ndn::App tracing for interest
@@ -182,21 +194,18 @@ void
 RepeatingConsumer::OnData(std::shared_ptr<const ndn::Data> data)
 {
   NS_LOG_FUNCTION_NOARGS();
-
   NS_LOG_DEBUG("<< D: " << data->getName() << " freshness=" << static_cast<ndn::time::milliseconds>(data->getFreshnessPeriod()) << " pushed=" << data->getPushed());
 
-  // Is the node outside of the communication zone?
   Vector currentPosition = getPosition();
   double x = currentPosition.x;
   double y = currentPosition.y;
-
 
   if(canCommunicate(x, y)) {
     App::OnData(data);
     NS_LOG_DEBUG ("Logging data packet Position x: " << x << " Position y: " << y);
     int hopCount = 0;
     auto hopCountTag = data->getTag<ndn::lp::HopCountTag>();
-    if (hopCountTag != nullptr) { // packet came from local node's cache
+    if (hopCountTag != nullptr) { // packet came from local node' cache
       hopCount = *hopCountTag;
     } else {
       NS_LOG_DEBUG("Packet coming from local cache");
@@ -204,7 +213,9 @@ RepeatingConsumer::OnData(std::shared_ptr<const ndn::Data> data)
 
     if(m_waitingForData) {
       m_lastRetransmittedInterestDataDelay(this, 1, Simulator::Now() - m_lastInterestSentTime, hopCount);
+      m_firstInterestDataDelay(this, 1, Simulator::Now() - m_firstInterestSentTime, m_retxCount, hopCount);
       NS_LOG_DEBUG ("logging last packet delay, delay=" << (Simulator::Now() - m_lastInterestSentTime));
+      NS_LOG_DEBUG ("logging first packet delay, delay=" << (Simulator::Now() - m_firstInterestSentTime));
       m_waitingForData = false;
     }
 

@@ -71,6 +71,7 @@ public:
 
 public:
   typedef void (*LastRetransmittedInterestDataDelayCallback)(Ptr<App> app, uint32_t seqno, Time delay, int32_t hopCount);
+  typedef void (*FirstInterestDataDelayCallback)(Ptr<App> app, uint32_t seqno, Time delay, uint32_t retxCount, int32_t hopCount);
 
 private:
   void
@@ -87,14 +88,18 @@ private:
   bool m_isRunning;
   bool m_waitingForData;   ///< \brief Flag which indicates whether the current node is waiting on a data packet
   bool m_firstTime;
+  uint32_t m_retxCount;
   EventId m_sendEvent; ///< @brief EventId of pending "send packet" event
   ndn::Name m_name;
-  Time m_lastInterestSentTime; ///< \brief The time that the current interest was sent at
+  Time m_lastInterestSentTime; ///< \brief The time that the most recently transmitted interest was sent at
+  Time m_firstInterestSentTime; ///< \brief The time that the first interest requesting a piece of data was sent at
   Ptr<RandomVariableStream> m_random;
 
   /// @cond include_hidden
-  TracedCallback<Ptr<App> /* app */, uint32_t /* seq No. */, Time /* delay */, int32_t /*hop count*/>
+  TracedCallback<Ptr<App> /* app */, uint32_t /* seqno */, Time /* delay */, int32_t /*hop count*/>
     m_lastRetransmittedInterestDataDelay;
+  TracedCallback<Ptr<App> /* app */, uint32_t /* seqno */, Time /* delay */, uint32_t /*retx count*/, int32_t /*hop count*/>
+    m_firstInterestDataDelay;
   /// @endcond
 };
 

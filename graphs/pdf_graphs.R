@@ -84,9 +84,14 @@ producer_barcharts_packets <- function(all.packets) {
 }
 
 ## Mean delay
-grouped_barcharts_delay <- function(all.packets) {
+grouped_barcharts_delay <- function(all.packets, last.delay = FALSE) {
   
   all.packets <- transform(all.packets, DelayMS = DelayS * 1000)
+  if (last.delay) {
+    all.packets <- all.packets[which(all.packets$Type == "LastDelay"),]
+  } else {
+    all.packets <- all.packets[which(all.packets$Type == "FullDelay"),]
+  }
   
   all.packets.density <- aggregate(DelayMS ~ method + density, data=all.packets, FUN=mean)
   all.packets.speed <- aggregate(DelayMS ~ method + speed, data=all.packets, FUN=mean)
@@ -135,6 +140,8 @@ grouped_barcharts_delay <- function(all.packets) {
   
   return(plot.list)
 }
+
+
 
 ## cache hit ratio ##
 grouped_barcharts_cache <- function(cache.frame) {
@@ -204,7 +211,7 @@ get_directories <- function() {
   list.dirs(path = str_c("./data/pure-ndn_1s"), full.names = FALSE, recursive = FALSE)
 }
 
-combine_and_clean_all_data <- function(directories, traceFile, time) {
+combine_and_clean_all_data <- function(directories, traceFile, time, producer = FALSE) {
   data.list <- lapply(directories, combine_methods_by_directory, traceFile, time)
   data.combined <- bind_rows(data.list)
   data.combined <- coerce_to_factor(data.combined, c("method", "density", "speed", "range"))
@@ -214,7 +221,7 @@ combine_and_clean_all_data <- function(directories, traceFile, time) {
   return(data.combined)
 }
 
-combine_methods_by_directory <- function(dir, traceFile, time) {
+combine_methods_by_directory <- function(dir, traceFile, time, producer = FALSE) {
   methods.list <- lapply(disseminationMethods, read_and_append_method, dir, traceFile, time)
   data.combined <- bind_rows(methods.list)
   components <- str_split(dir, "-")[[1]]
@@ -229,7 +236,7 @@ combine_methods_by_directory <- function(dir, traceFile, time) {
 }
 
 # side-effects
-read_and_append_method <- function(disseminationMethod, dir, traceFile, time) {
+read_and_append_method <- function(disseminationMethod, dir, traceFile, time, producer = FALSE) {
   # read the data in
   data <- read.table(str_c("./data/", disseminationMethod, "/", dir, "/", traceFile), header=T)
   
@@ -240,7 +247,24 @@ read_and_append_method <- function(disseminationMethod, dir, traceFile, time) {
   if (traceFile == "rate-trace.txt") {
     data <- clean_rate_frame(data)
   }
+  
+  if (producer) {
+    data <- get_packets_at_producer(data)
+  }
   return(data)
+}
+
+get_packets_at_producer <- function(data.packets) {
+  producerNodeId <- get_producer_node_ID(data.packets)
+  producer.frame <- get_data_frame_from_node_id(data.packets, producerNodeId)
+}
+
+get_producer_node_ID <- function(data.packets) {
+  return(max(as.numeric(data.packets$Node)) - 1)
+}
+
+get_data_frame_from_node_id <- function(data.frame, nodeID) {
+  return(data.frame[which(data.frame$Node == nodeID),])
 }
 
 coerce_to_factor <- function(data.frame, cols) {
@@ -252,7 +276,7 @@ clean_rate_frame <- function(data.packets) {
   data.packets$Node = factor(data.packets$Node)
   data.packets$FaceDescr = factor(data.packets$FaceDescr)
   data.packets$Type = factor(data.packets$Type)
-  data.packets <- data.packets[!data.packets$FaceDescr == "all",]
+  #data.packets <- data.packets[!data.packets$FaceDescr == "all",]
   data.packets <- data.packets[!data.packets$FaceDescr == "internal://",]
   data.packets <- data.packets[!data.packets$FaceDescr == "appFace://",]
   data.packets <- data.packets[!data.packets$Type == "InNacks",]
@@ -312,79 +336,6 @@ convert_to_tidy_cache_format <- function(untidy.frame) {
   cache.frame <- cache.frame[c("Time", "Node", "density", "speed", "range", "CacheHits", "CacheMisses", "method")]
 }
 
-aggregate_producer_packets <- function(directories) {
-  packet.totals <- list()
-  
-  for (i in 1:length(directories)) {
-    dir <- directories[i]
-    dir.packets <- combine_methods_packet(dir, FALSE, FALSE)
-    dir.packets <- clean_rate_frame(dir.packets)
-    producer.packets <- get_packets_at_producer(dir.packets)
-    
-    components <- str_split(dir, "-")[[1]]
-    density <- components[2]
-    speed <- components[3]
-    tRange <- components[4]
-    producer.packets <- transform(producer.packets, density = density)
-    producer.packets <- transform(producer.packets, speed = speed)
-    producer.packets <- transform(producer.packets, range = tRange)
-  
-    packet.totals[[i]] <- producer.packets
-  }
-  
-  all.packets <- packet.totals[[1]]
-  
-  for(i in 2:length(packet.totals)) {
-    all.packets <- rbind(all.packets, packet.totals[[i]])
-  }
-  
-  return(all.packets)
-}
-
-aggregate_producer_packets_by_density <- function(directories) {
-  packet.totals <- list()
-  
-  for (i in 1:length(directories)) {
-    dir <- directories[i]
-    dir.packets <- combine_methods_packet(dir, FALSE, FALSE)
-    dir.packets <- clean_rate_frame(dir.packets)
-    producer.packets <- get_packets_at_producer(dir.packets)
-    
-    components <- str_split(dir, "-")[[1]]
-    density <- components[2]
-    speed <- components[3]
-    tRange <- components[4]
-    producer.packets <- transform(producer.packets, density = density)
-    producer.packets <- transform(producer.packets, speed = speed)
-    producer.packets <- transform(producer.packets, range = tRange)
-    
-    producer.packets <- aggregate(PacketRaw ~ method + density, data = producer.packets, FUN = sum)
-    
-    packet.totals[[i]] <- producer.packets
-  }
-  
-  all.packets <- packet.totals[[1]]
-  
-  for(i in 2:length(packet.totals)) {
-    all.packets <- rbind(all.packets, packet.totals[[i]])
-  }
-  
-  return(all.packets)
-}
-
-get_packets_at_producer <- function(data.packets) {
-  producerNodeId <- get_producer_node_ID(data.packets)
-  producer.frame <- get_data_frame_from_node_id(data.packets, producerNodeId)
-}
-
-get_producer_node_ID <- function(data.packets) {
-  return(max(as.numeric(data.packets$Node)) - 1)
-}
-
-get_data_frame_from_node_id <- function(data.frame, nodeID) {
-  return(data.frame[which(data.frame$Node == nodeID),])
-}
-
 plot_subset_of_packet_type_column <- function(data.frame, values, title) {
   satisfied_interests <- get_dataframe_subset_by_column_value(data.frame, data.frame$Type, values)
   satisfied_interests_method <- custom_aggregate(satisfied_interests, "PacketRaw")
@@ -438,6 +389,19 @@ generate_packets_delay_cache_pdf <- function(packet.frame, delay.frame, cache.fr
   dev.off()
 }
 
+pdf("interest-satisfactino-ratio.pdf")
+ggplot(test, aes(fill=method, x=method, y=ratio*100)) + 
+  geom_bar(stat="identity") +
+  xlab("Method") +
+  ylab("Interests satisfaction percentage (%)") +
+  ggtitle("Percentage of all satisfied interests to interests in the network") +
+  theme_light() +
+  theme(axis.text.x = element_blank()) +
+  scale_fill_manual(values=group.colours)
+dev.off()
+
+ratio <- interests_agg[,3]/interests_agg[,2]
+
 ## MAIN: playground to generate various pdfs ##
 
 #setting up data.frames
@@ -456,28 +420,13 @@ all.cache <- combine_and_clean_all_data(directories = directories, traceFile = t
 all.cache <- convert_to_tidy_cache_format(all.cache)
 
 one_second_methods <- c("pure-ndn_1s", "unsolicited_1s", "proactive_1s", "proactive_and_unsolicited_1s")
-one_hundred_millisecond_methods <- c("pure-ndn_100ms", "unsolicited_100ms", "proactive_100ms", "proactive_and_unsolicited_100ms")
-
-all.packets.1s <- dplyr::filter(all.packets, method %in% one_second_methods)
-all.delay.1s <- dplyr::filter(all.delay, method %in% one_second_methods)
-all.cache.1s <- dplyr::filter(all.cache, method %in% one_second_methods)
-
-all.packets.100ms <- dplyr::filter(all.packets, method %in% one_hundred_millisecond_methods)
-all.delay.100ms <- dplyr::filter(all.delay, method %in% one_hundred_millisecond_methods)
-all.cache.100ms <- dplyr::filter(all.cache, method %in% one_hundred_millisecond_methods)
 
 generate_packets_delay_cache_pdf(all.packets, all.delay, all.cache, "plots_with_forwarding.pdf")
-generate_packets_delay_cache_pdf(all.packets.1s, all.delay.1s, all.cache.1s, "plots_with_forwarding_1s.pdf")
-generate_packets_delay_cache_pdf(all.packets.100ms, all.delay.1s, all.delay.100ms, "plots_with_forwarding_100ms.pdf")
 
 ## producer packets
-producerByDensity.packets <- aggregate_producer_packets_by_density(directories)
-producer.packets <- aggregate_producer_packets(directories)
+producer.packets <- combine_and_clean_all_data(directories = directories, traceFile = traceFiles[1], lead_time, producer = TRUE)
 producerInInterests.packets <- filter_by_in_interests(producer.packets)
 producerinterests.packets <- filter_data_packets(producer.packets)
-
-producer.packets$density <- convert_vehicles_to_percentages(producer.packets$density)
-producer.packets$density <- factor(producer.packets$density, levels=c("15%", "50%", "100%"))
 
 #################################
 # Producer packets bar charts   #

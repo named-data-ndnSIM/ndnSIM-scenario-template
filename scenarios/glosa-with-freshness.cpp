@@ -160,7 +160,7 @@ main(int argc, char* argv[])
   // producerHelper.SetPrefix("/cam");
   // producerHelper.Install(producerNodes);
 
-  Simulator::Stop(Seconds(350.0));
+  Simulator::Stop(Seconds(300.0));
 
   std::ostringstream osss;
   osss << dir << "rate-trace.txt";
